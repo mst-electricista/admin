@@ -2,7 +2,8 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Meta tag optimizado para WebView en Android: sin zoom, escalado fijo -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Contabilidad Empresa Familiar</title>
     <!-- Tailwind CSS para los estilos -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -15,202 +16,211 @@
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
 
     <style>
-        body { background-color: #f3f4f6; font-family: 'Inter', sans-serif; }
+        body { 
+            background-color: #f3f4f6; 
+            font-family: 'Inter', sans-serif; 
+            -webkit-tap-highlight-color: transparent; /* Quita el recuadro azul nativo de Android al tocar */
+        }
+        /* Scrollbar delgada para WebView */
+        ::-webkit-scrollbar { height: 6px; width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px;}
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px;}
     </style>
 </head>
-<body class="p-6">
+<body class="p-2 sm:p-6 pb-20"> <!-- Padding menor en mobile, pb-20 por si hay barra de navegación abajo -->
 
     <div class="max-w-6xl mx-auto">
         <!-- Encabezado y Logotipo -->
-        <div class="flex items-center justify-between mb-8 bg-white p-4 rounded-xl shadow">
-            <div class="flex items-center gap-4">
-                <img id="logo-img" src="" alt="Logo" class="h-16 hidden object-contain">
-                <h1 class="text-3xl font-bold text-gray-800">Contabilidad de la Empresa</h1>
+        <div class="flex flex-col sm:flex-row items-center justify-between mb-4 sm:mb-8 bg-white p-4 rounded-xl shadow gap-4">
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-center sm:justify-start">
+                <img id="logo-img" src="" alt="Logo" class="h-12 sm:h-16 hidden object-contain">
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 text-center">Contabilidad</h1>
             </div>
-            <button onclick="generarPDF()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded shadow">
-                Generar PDF Completo
+            <button onclick="generarPDF()" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-colors">
+                📄 Generar PDF Completo
             </button>
         </div>
 
         <!-- Gestor de Proyectos / Cuadernos -->
-        <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-xl shadow mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-xl shadow mb-6 flex flex-col md:flex-row items-center justify-between gap-3">
             <div class="flex-1 w-full">
-                <label class="block text-sm font-bold text-gray-700 mb-1">Proyecto / Cuaderno Actual:</label>
-                <select id="proyecto-selector" onchange="seleccionarProyecto()" class="w-full border rounded p-2 bg-white font-semibold">
+                <label class="block text-sm font-bold text-gray-700 mb-1">Cuaderno Actual:</label>
+                <select id="proyecto-selector" onchange="seleccionarProyecto()" class="w-full border-gray-300 rounded-lg p-3 bg-white font-semibold text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-500">
                     <option value="">Cargando proyectos...</option>
                 </select>
             </div>
             <div class="flex-1 w-full flex items-end">
-                <button onclick="crearNuevoProyecto()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded shadow w-full md:w-auto">
-                    + Crear Nuevo Cuaderno
+                <button onclick="crearNuevoProyecto()" class="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold py-3 px-4 rounded-lg shadow-md w-full transition-colors mt-2 md:mt-0">
+                    + Nuevo Cuaderno
                 </button>
             </div>
         </div>
 
         <div id="app-content" class="hidden">
-            <!-- Formularios (3 Columnas) -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Formularios (Se apilan en mobile, 3 columnas en PC) -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
                 <!-- Registro de Ingresos -->
-                <div class="bg-white p-6 rounded-xl shadow">
-                    <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">1. Ingreso (Anticipo)</h2>
+                <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h2 class="text-lg font-bold text-green-700 mb-4 border-b pb-2 flex items-center gap-2">💰 1. Ingreso (Anticipo)</h2>
                     <form id="form-ingreso" onsubmit="agregarIngreso(event)">
-                        <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">Tipo</label>
-                                <select id="ingreso-tipo" class="mt-1 block w-full border rounded p-2" required>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
+                                <select id="ingreso-tipo" class="w-full border border-gray-300 rounded-lg p-3 bg-white focus:ring-2 focus:ring-green-500" required>
                                     <option value="Anticipo">Anticipo</option>
                                     <option value="Liquidación">Liquidación</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">Fecha</label>
-                                <input type="date" id="ingreso-fecha" class="mt-1 block w-full border rounded p-2" required>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Fecha</label>
+                                <input type="date" id="ingreso-fecha" class="w-full border border-gray-300 rounded-lg p-3 bg-white focus:ring-2 focus:ring-green-500" required>
                             </div>
                         </div>
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700">Concepto</label>
-                            <input type="text" id="ingreso-trabajo" placeholder="Ej. Instalación" class="mt-1 block w-full border rounded p-2" required>
+                        <div class="mb-3">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Concepto</label>
+                            <input type="text" id="ingreso-trabajo" placeholder="Ej. Instalación" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-500" required>
                         </div>
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700">¿Quién lo recibió?</label>
-                            <select id="ingreso-receptor" class="mt-1 block w-full border rounded p-2" required>
+                        <div class="mb-3">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">¿Quién lo recibió?</label>
+                            <select id="ingreso-receptor" class="w-full border border-gray-300 rounded-lg p-3 bg-white focus:ring-2 focus:ring-green-500" required>
                                 <option value="Papá">Papá</option>
                                 <option value="Hijo">Hijo</option>
                             </select>
                         </div>
-                        <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">Método</label>
-                                <select id="ingreso-metodo" class="mt-1 block w-full border rounded p-2" required onchange="toggleTarjetaIngreso()">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Método</label>
+                                <select id="ingreso-metodo" class="w-full border border-gray-300 rounded-lg p-3 bg-white focus:ring-2 focus:ring-green-500" required onchange="toggleTarjetaIngreso()">
                                     <option value="Efectivo">Efectivo</option>
                                     <option value="Tarjeta">Tarjeta</option>
                                 </select>
                             </div>
                             <div id="div-tarjeta-ingreso" class="hidden">
-                                <label class="block text-sm font-medium text-gray-700">Tarjeta</label>
-                                <input type="text" id="ingreso-tarjeta-nombre" class="mt-1 block w-full border rounded p-2" placeholder="Ej. Bancomer">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Tarjeta</label>
+                                <input type="text" id="ingreso-tarjeta-nombre" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-500" placeholder="Ej. Bancomer">
                             </div>
                         </div>
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700">Monto (\$)</label>
-                            <input type="number" id="ingreso-monto" min="0" step="0.01" class="mt-1 block w-full border rounded p-2" required>
+                        <div class="mb-5">
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Monto ($)</label>
+                            <input type="number" id="ingreso-monto" min="0" step="0.01" class="w-full border border-gray-300 rounded-lg p-3 font-bold text-lg text-green-700 focus:ring-2 focus:ring-green-500" required>
                         </div>
-                        <button type="submit" id="btn-ingreso" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Guardar Ingreso</button>
-                        <button type="button" id="btn-cancelar-ingreso" onclick="cancelarEdicionIngreso()" class="hidden w-full mt-2 bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded">Cancelar</button>
+                        <button type="submit" id="btn-ingreso" class="w-full bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-bold py-3 px-4 rounded-lg shadow transition-colors">Guardar Ingreso</button>
+                        <button type="button" id="btn-cancelar-ingreso" onclick="cancelarEdicionIngreso()" class="hidden w-full mt-2 bg-gray-400 active:bg-gray-500 text-white font-bold py-3 px-4 rounded-lg">Cancelar Edición</button>
                     </form>
                 </div>
 
                 <!-- Registro de Gastos -->
-                <div class="bg-white p-6 rounded-xl shadow">
-                    <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">2. Gasto / Compra</h2>
+                <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h2 class="text-lg font-bold text-red-700 mb-4 border-b pb-2 flex items-center gap-2">🛒 2. Gasto / Compra</h2>
                     <form id="form-gasto" onsubmit="agregarGasto(event)">
-                        <div class="grid grid-cols-2 gap-4 mb-4">
-                            <div class="col-span-2">
-                                <label class="block text-sm font-medium text-gray-700">Concepto / Material</label>
-                                <input type="text" id="gasto-concepto" class="mt-1 block w-full border rounded p-2" required>
+                        <div class="grid grid-cols-1 gap-3 mb-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Concepto / Material</label>
+                                <input type="text" id="gasto-concepto" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-red-500" required>
                             </div>
-                            <div class="col-span-2">
-                                <label class="block text-sm font-medium text-gray-700">Fecha</label>
-                                <input type="date" id="gasto-fecha" class="mt-1 block w-full border rounded p-2" required>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Fecha</label>
+                                <input type="date" id="gasto-fecha" class="w-full border border-gray-300 rounded-lg p-3 bg-white focus:ring-2 focus:ring-red-500" required>
                             </div>
                         </div>
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700">¿Quién pagó el gasto?</label>
-                            <select id="gasto-pagador" class="mt-1 block w-full border rounded p-2" required>
+                        <div class="mb-3">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">¿Quién pagó el gasto?</label>
+                            <select id="gasto-pagador" class="w-full border border-gray-300 rounded-lg p-3 bg-white focus:ring-2 focus:ring-red-500" required>
                                 <option value="Papá">Papá</option>
                                 <option value="Hijo">Hijo</option>
                             </select>
                         </div>
-                        <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">Método</label>
-                                <select id="gasto-metodo" class="mt-1 block w-full border rounded p-2" required onchange="toggleTarjetaGasto()">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Método</label>
+                                <select id="gasto-metodo" class="w-full border border-gray-300 rounded-lg p-3 bg-white focus:ring-2 focus:ring-red-500" required onchange="toggleTarjetaGasto()">
                                     <option value="Efectivo">Efectivo</option>
                                     <option value="Tarjeta">Tarjeta</option>
                                 </select>
                             </div>
                             <div id="div-tarjeta-gasto" class="hidden">
-                                <label class="block text-sm font-medium text-gray-700">Tarjeta</label>
-                                <input type="text" id="gasto-tarjeta-nombre" class="mt-1 block w-full border rounded p-2" placeholder="Ej. Santander">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Tarjeta</label>
+                                <input type="text" id="gasto-tarjeta-nombre" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-red-500" placeholder="Ej. Santander">
                             </div>
                         </div>
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700">Monto (\$)</label>
-                            <input type="number" id="gasto-monto" min="0" step="0.01" class="mt-1 block w-full border rounded p-2" required>
+                        <div class="mb-5">
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Monto ($)</label>
+                            <input type="number" id="gasto-monto" min="0" step="0.01" class="w-full border border-gray-300 rounded-lg p-3 font-bold text-lg text-red-700 focus:ring-2 focus:ring-red-500" required>
                         </div>
-                        <button type="submit" id="btn-gasto" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Guardar Gasto</button>
-                        <button type="button" id="btn-cancelar-gasto" onclick="cancelarEdicionGasto()" class="hidden w-full mt-2 bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded">Cancelar</button>
+                        <button type="submit" id="btn-gasto" class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-3 px-4 rounded-lg shadow transition-colors">Guardar Gasto</button>
+                        <button type="button" id="btn-cancelar-gasto" onclick="cancelarEdicionGasto()" class="hidden w-full mt-2 bg-gray-400 active:bg-gray-500 text-white font-bold py-3 px-4 rounded-lg">Cancelar Edición</button>
                     </form>
                 </div>
 
                 <!-- Registro de Préstamos/Adelantos -->
-                <div class="bg-white p-6 rounded-xl shadow border-2 border-purple-200">
-                    <h2 class="text-xl font-bold text-purple-800 mb-4 border-b pb-2">3. Préstamo / Adelanto</h2>
+                <div class="bg-purple-50 p-4 sm:p-6 rounded-xl shadow-sm border-2 border-purple-200">
+                    <h2 class="text-lg font-bold text-purple-800 mb-4 border-b border-purple-200 pb-2 flex items-center gap-2">🤝 3. Adelanto / Préstamo</h2>
                     <form id="form-prestamo" onsubmit="agregarPrestamo(event)">
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700">Fecha</label>
-                            <input type="date" id="prestamo-fecha" class="mt-1 block w-full border rounded p-2" required>
+                        <div class="mb-3">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Fecha</label>
+                            <input type="date" id="prestamo-fecha" class="w-full border border-gray-300 rounded-lg p-3 bg-white focus:ring-2 focus:ring-purple-500" required>
                         </div>
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700">¿Quién da el dinero?</label>
-                            <select id="prestamo-da" class="mt-1 block w-full border rounded p-2" required onchange="actualizarReceptor()">
-                                <option value="Papá">Papá</option>
-                                <option value="Hijo">Hijo</option>
-                            </select>
+                        <div class="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Da el dinero</label>
+                                <select id="prestamo-da" class="w-full border border-gray-300 rounded-lg p-3 bg-white focus:ring-2 focus:ring-purple-500" required onchange="actualizarReceptor()">
+                                    <option value="Papá">Papá</option>
+                                    <option value="Hijo">Hijo</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Lo recibe</label>
+                                <input type="text" id="prestamo-recibe" value="Hijo" class="w-full border border-gray-300 rounded-lg p-3 bg-gray-200 font-bold text-gray-600" readonly>
+                            </div>
                         </div>
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700">¿Quién lo recibe?</label>
-                            <input type="text" id="prestamo-recibe" value="Hijo" class="mt-1 block w-full border rounded p-2 bg-gray-100 font-bold" readonly>
+                        <div class="mb-5">
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Monto ($)</label>
+                            <input type="number" id="prestamo-monto" min="0" step="0.01" class="w-full border border-gray-300 rounded-lg p-3 font-bold text-lg text-purple-700 focus:ring-2 focus:ring-purple-500" required>
                         </div>
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700">Monto (\$)</label>
-                            <input type="number" id="prestamo-monto" min="0" step="0.01" class="mt-1 block w-full border rounded p-2" required>
-                        </div>
-                        <button type="submit" id="btn-prestamo" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded mt-8">Guardar Préstamo</button>
-                        <button type="button" id="btn-cancelar-prestamo" onclick="cancelarEdicionPrestamo()" class="hidden w-full mt-2 bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded">Cancelar</button>
+                        <button type="submit" id="btn-prestamo" class="w-full bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white font-bold py-3 px-4 rounded-lg shadow transition-colors mt-2 sm:mt-8">Guardar Préstamo</button>
+                        <button type="button" id="btn-cancelar-prestamo" onclick="cancelarEdicionPrestamo()" class="hidden w-full mt-2 bg-gray-400 active:bg-gray-500 text-white font-bold py-3 px-4 rounded-lg">Cancelar Edición</button>
                     </form>
                 </div>
             </div>
 
             <!-- Ajuste de Cuentas (Quién debe a quién) -->
-            <div id="ajuste-cuentas" class="bg-yellow-100 border-l-4 border-yellow-500 p-6 rounded-xl shadow mb-8 hidden">
-                <h2 class="text-xl font-bold text-yellow-800 mb-2">Ajuste Final de Cuentas</h2>
-                <p id="texto-ajuste" class="text-lg text-yellow-900 font-medium"></p>
+            <div id="ajuste-cuentas" class="bg-yellow-100 border-l-4 border-yellow-500 p-4 sm:p-6 rounded-xl shadow mb-6 hidden">
+                <h2 class="text-lg sm:text-xl font-bold text-yellow-800 mb-2">⚖️ Ajuste Final de Cuentas</h2>
+                <p id="texto-ajuste" class="text-sm sm:text-lg text-yellow-900 font-medium leading-tight"></p>
             </div>
 
             <!-- Resumen de Totales y Dinero en Mano -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
                 <!-- Resumen Financiero -->
-                <div class="bg-white p-6 rounded-xl shadow">
-                    <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Resumen Financiero (El Negocio)</h2>
-                    <div class="space-y-3 text-lg">
-                        <div class="flex justify-between border-b pb-1"><span>Total Ingresos (Bruto):</span> <span class="font-bold text-green-600" id="res-ingresos">$0.00</span></div>
-                        <div class="flex justify-between border-b pb-1"><span>Total Gastos (Inversión):</span> <span class="font-bold text-red-600" id="res-gastos">\$0.00</span></div>
-                        <div class="flex justify-between border-b pb-1"><span>Utilidad Libre (Ganancia):</span> <span class="font-bold text-blue-600" id="res-utilidad">\$0.00</span></div>
+                <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">📊 Resumen Financiero</h2>
+                    <div class="space-y-3 text-sm sm:text-base">
+                        <div class="flex justify-between border-b pb-2"><span class="text-gray-600">Total Ingresos:</span> <span class="font-bold text-green-600" id="res-ingresos">$0.00</span></div>
+                        <div class="flex justify-between border-b pb-2"><span class="text-gray-600">Total Gastos:</span> <span class="font-bold text-red-600" id="res-gastos">$0.00</span></div>
+                        <div class="flex justify-between border-b pb-2"><span class="text-gray-600">Utilidad Libre:</span> <span class="font-bold text-blue-600 text-lg" id="res-utilidad">$0.00</span></div>
                         
-                        <div class="mt-4 bg-gray-50 p-4 rounded">
-                            <h3 class="font-bold text-gray-700 mb-2">Ganancia que le toca a cada uno:</h3>
-                            <div class="flex justify-between"><span>Papá (55%):</span> <span class="font-bold" id="res-papa-ganancia">\$0.00</span></div>
-                            <div class="flex justify-between"><span>Hijo (45%):</span> <span class="font-bold" id="res-hijo-ganancia">\$0.00</span></div>
+                        <div class="mt-4 bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-200">
+                            <h3 class="font-bold text-gray-700 mb-2 text-xs uppercase">Ganancia Neta:</h3>
+                            <div class="flex justify-between mb-1"><span class="text-gray-700">Papá (55%):</span> <span class="font-bold" id="res-papa-ganancia">$0.00</span></div>
+                            <div class="flex justify-between"><span class="text-gray-700">Hijo (45%):</span> <span class="font-bold" id="res-hijo-ganancia">$0.00</span></div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Dinero Físico en Mano -->
-                <div class="bg-white p-6 rounded-xl shadow">
-                    <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Dinero Físico en la Bolsa</h2>
-                    <p class="text-sm text-gray-500 mb-4">Lo que cada quien tiene físicamente (Anticipos cobrados + Préstamos recibidos - Gastos pagados - Préstamos dados).</p>
-                    <div class="space-y-4 text-lg">
-                        <div class="bg-gray-50 p-4 rounded border-l-4 border-gray-400">
-                            <div class="flex justify-between items-center mb-1">
-                                <span class="font-bold">Papá tiene físicamente:</span> 
-                                <span class="font-bold text-2xl" id="res-papa-mano">\$0.00</span>
+                <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">💵 Dinero Físico (En la Bolsa)</h2>
+                    <div class="space-y-4 text-sm sm:text-base">
+                        <div class="bg-blue-50 p-3 sm:p-4 rounded-lg border border-blue-200">
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-blue-800">Papá tiene:</span> 
+                                <span class="font-bold text-xl sm:text-2xl text-blue-900" id="res-papa-mano">$0.00</span>
                             </div>
                         </div>
-                        <div class="bg-gray-50 p-4 rounded border-l-4 border-gray-400">
-                            <div class="flex justify-between items-center mb-1">
-                                <span class="font-bold">Hijo tiene físicamente:</span> 
-                                <span class="font-bold text-2xl" id="res-hijo-mano">\$0.00</span>
+                        <div class="bg-teal-50 p-3 sm:p-4 rounded-lg border border-teal-200">
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-teal-800">Hijo tiene:</span> 
+                                <span class="font-bold text-xl sm:text-2xl text-teal-900" id="res-hijo-mano">$0.00</span>
                             </div>
                         </div>
                     </div>
@@ -218,77 +228,86 @@
             </div>
 
             <!-- Tablas de Historial -->
-            <div class="grid grid-cols-1 gap-8">
+            <div class="space-y-6">
                 <!-- Tabla Préstamos -->
-                <div id="contenedor-tabla-prestamos" class="bg-purple-50 p-6 rounded-xl shadow overflow-x-auto hidden border border-purple-200">
-                    <h2 class="text-xl font-bold text-purple-800 mb-4 border-b border-purple-200 pb-2">Historial de Adelantos / Préstamos</h2>
-                    <table class="w-full text-left border-collapse" id="tabla-prestamos">
-                        <thead>
-                            <tr class="bg-purple-100">
-                                <th class="p-2 border-b border-purple-200">Fecha</th>
-                                <th class="p-2 border-b border-purple-200">Dio el dinero</th>
-                                <th class="p-2 border-b border-purple-200">Recibió el dinero</th>
-                                <th class="p-2 border-b border-purple-200 text-right">Monto</th>
-                                <th class="p-2 border-b border-purple-200 text-center">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                <div id="contenedor-tabla-prestamos" class="bg-white rounded-xl shadow-sm border border-purple-200 overflow-hidden hidden">
+                    <div class="p-4 bg-purple-50 border-b border-purple-100">
+                        <h2 class="text-lg font-bold text-purple-800">Historial de Adelantos</h2>
+                    </div>
+                    <div class="overflow-x-auto w-full">
+                        <table class="w-full text-left border-collapse whitespace-nowrap" id="tabla-prestamos">
+                            <thead>
+                                <tr class="bg-gray-50 text-xs uppercase text-gray-500">
+                                    <th class="p-3 border-b">Fecha</th>
+                                    <th class="p-3 border-b">Detalle</th>
+                                    <th class="p-3 border-b text-right">Monto</th>
+                                    <th class="p-3 border-b text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-sm"></tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- Tabla Ingresos -->
-                <div class="bg-white p-6 rounded-xl shadow overflow-x-auto">
-                    <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Historial de Ingresos</h2>
-                    <table class="w-full text-left border-collapse" id="tabla-ingresos">
-                        <thead>
-                            <tr class="bg-gray-100">
-                                <th class="p-2 border-b">Fecha</th>
-                                <th class="p-2 border-b">Tipo</th>
-                                <th class="p-2 border-b">Trabajo</th>
-                                <th class="p-2 border-b">Receptor</th>
-                                <th class="p-2 border-b">Método</th>
-                                <th class="p-2 border-b text-right">Monto</th>
-                                <th class="p-2 border-b text-center">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="p-4 bg-gray-50 border-b border-gray-200">
+                        <h2 class="text-lg font-bold text-gray-800">Historial de Ingresos</h2>
+                    </div>
+                    <div class="overflow-x-auto w-full">
+                        <table class="w-full text-left border-collapse whitespace-nowrap" id="tabla-ingresos">
+                            <thead>
+                                <tr class="bg-gray-50 text-xs uppercase text-gray-500">
+                                    <th class="p-3 border-b">Fecha</th>
+                                    <th class="p-3 border-b">Concepto</th>
+                                    <th class="p-3 border-b">Receptor/Método</th>
+                                    <th class="p-3 border-b text-right">Monto</th>
+                                    <th class="p-3 border-b text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-sm"></tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- Tablas de Gastos (SEPARADOS) -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Gastos Papá -->
-                    <div class="bg-white p-6 rounded-xl shadow overflow-x-auto border-t-4 border-blue-500">
-                        <h2 class="text-xl font-bold text-blue-800 mb-4 border-b pb-2">Gastos - Papá</h2>
-                        <table class="w-full text-left border-collapse" id="tabla-gastos-papa">
-                            <thead>
-                                <tr class="bg-blue-50">
-                                    <th class="p-2 border-b">Fecha</th>
-                                    <th class="p-2 border-b">Concepto</th>
-                                    <th class="p-2 border-b">Método</th>
-                                    <th class="p-2 border-b text-right">Monto</th>
-                                    <th class="p-2 border-b text-center">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
+                    <div class="bg-white rounded-xl shadow-sm border border-blue-200 overflow-hidden border-t-4 border-t-blue-500">
+                        <div class="p-4 bg-blue-50 border-b border-blue-100">
+                            <h2 class="text-lg font-bold text-blue-800">Gastos - Papá</h2>
+                        </div>
+                        <div class="overflow-x-auto w-full">
+                            <table class="w-full text-left border-collapse whitespace-nowrap" id="tabla-gastos-papa">
+                                <thead>
+                                    <tr class="bg-gray-50 text-xs uppercase text-gray-500">
+                                        <th class="p-3 border-b">Fecha / Concepto</th>
+                                        <th class="p-3 border-b text-right">Monto</th>
+                                        <th class="p-3 border-b text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-sm"></tbody>
+                            </table>
+                        </div>
                     </div>
 
                     <!-- Gastos Hijo -->
-                    <div class="bg-white p-6 rounded-xl shadow overflow-x-auto border-t-4 border-teal-500">
-                        <h2 class="text-xl font-bold text-teal-800 mb-4 border-b pb-2">Gastos - Hijo</h2>
-                        <table class="w-full text-left border-collapse" id="tabla-gastos-hijo">
-                            <thead>
-                                <tr class="bg-teal-50">
-                                    <th class="p-2 border-b">Fecha</th>
-                                    <th class="p-2 border-b">Concepto</th>
-                                    <th class="p-2 border-b">Método</th>
-                                    <th class="p-2 border-b text-right">Monto</th>
-                                    <th class="p-2 border-b text-center">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
+                    <div class="bg-white rounded-xl shadow-sm border border-teal-200 overflow-hidden border-t-4 border-t-teal-500">
+                        <div class="p-4 bg-teal-50 border-b border-teal-100">
+                            <h2 class="text-lg font-bold text-teal-800">Gastos - Hijo</h2>
+                        </div>
+                        <div class="overflow-x-auto w-full">
+                            <table class="w-full text-left border-collapse whitespace-nowrap" id="tabla-gastos-hijo">
+                                <thead>
+                                    <tr class="bg-gray-50 text-xs uppercase text-gray-500">
+                                        <th class="p-3 border-b">Fecha / Concepto</th>
+                                        <th class="p-3 border-b text-right">Monto</th>
+                                        <th class="p-3 border-b text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-sm"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -297,7 +316,7 @@
 
     <script>
         // ==========================================
-        // 1. CONFIGURACIÓN DE TU LOGOTIPO Y FIREBASE
+        // 1. CONFIGURACIÓN
         // ==========================================
         const LOGO_URL = "https://res.cloudinary.com/ittxlkln/image/upload/v1792126734/LOGO_PORTADA.jpg";
         
@@ -377,8 +396,8 @@
                 document.getElementById('proyecto-selector').value = docRef.id;
                 seleccionarProyecto();
             } catch (error) {
-                console.error("Error al crear proyecto:", error);
-                alert("Hubo un error al crear el cuaderno. Revisa la consola.");
+                console.error("Error:", error);
+                alert("Hubo un error al crear el cuaderno.");
             }
         }
 
@@ -399,8 +418,6 @@
             unsubscribe = db.collection("proyectos").doc(proyectoActualId).onSnapshot((doc) => {
                 if (doc.exists) {
                     const data = doc.data();
-                    
-                    // Función para ordenar por fecha de más antiguo a más reciente
                     const ordenarPorFecha = (a, b) => new Date(a.fecha) - new Date(b.fecha);
 
                     ingresos = (data.ingresos || []).sort(ordenarPorFecha);
@@ -413,19 +430,20 @@
         }
 
         // ==========================================
-        // FUNCIONES DE TEXTO Y FORMATO
+        // TEXTO Y FORMATO (Acortado para móvil)
         // ==========================================
         function formatearFecha(fechaString) {
             if (!fechaString) return "";
             const partes = fechaString.split('-');
             if (partes.length !== 3) return fechaString; 
             const fecha = new Date(partes[0], partes[1] - 1, partes[2]);
-            const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            // Para móvil, usar un formato más corto: "15 oct. 2026"
+            const opciones = { year: 'numeric', month: 'short', day: 'numeric' };
             return fecha.toLocaleDateString('es-MX', opciones);
         }
 
         function formatoMoneda(valor) { 
-            return "\$" + valor.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2}); 
+            return "$" + valor.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2}); 
         }
 
         // ==========================================
@@ -496,21 +514,17 @@
             document.getElementById('form-prestamo').reset(); document.getElementById('prestamo-fecha').valueAsDate = new Date(); actualizarReceptor();
         }
 
-        // ELIMINAR
         async function eliminarIngreso(index) { if(confirm("¿Eliminar?")) { let actualizados = [...ingresos]; actualizados.splice(index, 1); await db.collection("proyectos").doc(proyectoActualId).update({ ingresos: actualizados }); } }
         async function eliminarGasto(index) { if(confirm("¿Eliminar?")) { let actualizados = [...gastos]; actualizados.splice(index, 1); await db.collection("proyectos").doc(proyectoActualId).update({ gastos: actualizados }); } }
         async function eliminarPrestamo(index) { if(confirm("¿Eliminar?")) { let actualizados = [...prestamos]; actualizados.splice(index, 1); await db.collection("proyectos").doc(proyectoActualId).update({ prestamos: actualizados }); } }
 
-        // EDITAR
-        function editarIngreso(index) { const i = ingresos[index]; document.getElementById('ingreso-tipo').value=i.tipo; document.getElementById('ingreso-fecha').value=i.fecha; document.getElementById('ingreso-trabajo').value=i.trabajo; document.getElementById('ingreso-receptor').value=i.receptor; document.getElementById('ingreso-metodo').value=i.metodo; if(i.metodo==='Tarjeta')document.getElementById('ingreso-tarjeta-nombre').value=i.tarjeta!=='-'?i.tarjeta:''; document.getElementById('ingreso-monto').value=i.monto; toggleTarjetaIngreso(); editIndexIngreso = index; const btn=document.getElementById('btn-ingreso'); btn.textContent="Actualizar"; btn.className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded"; document.getElementById('btn-cancelar-ingreso').classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); }
-        function editarGasto(index) { const g = gastos[index]; document.getElementById('gasto-concepto').value=g.concepto; document.getElementById('gasto-fecha').value=g.fecha; document.getElementById('gasto-pagador').value=g.pagador; document.getElementById('gasto-metodo').value=g.metodo; if(g.metodo==='Tarjeta')document.getElementById('gasto-tarjeta-nombre').value=g.tarjeta!=='-'?g.tarjeta:''; document.getElementById('gasto-monto').value=g.monto; toggleTarjetaGasto(); editIndexGasto = index; const btn=document.getElementById('btn-gasto'); btn.textContent="Actualizar"; btn.className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded"; document.getElementById('btn-cancelar-gasto').classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); }
-        function editarPrestamo(index) { const p = prestamos[index]; document.getElementById('prestamo-fecha').value=p.fecha; document.getElementById('prestamo-da').value=p.da; actualizarReceptor(); document.getElementById('prestamo-monto').value=p.monto; editIndexPrestamo = index; const btn=document.getElementById('btn-prestamo'); btn.textContent="Actualizar"; btn.className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded mt-8"; document.getElementById('btn-cancelar-prestamo').classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); }
+        function editarIngreso(index) { const i = ingresos[index]; document.getElementById('ingreso-tipo').value=i.tipo; document.getElementById('ingreso-fecha').value=i.fecha; document.getElementById('ingreso-trabajo').value=i.trabajo; document.getElementById('ingreso-receptor').value=i.receptor; document.getElementById('ingreso-metodo').value=i.metodo; if(i.metodo==='Tarjeta')document.getElementById('ingreso-tarjeta-nombre').value=i.tarjeta!=='-'?i.tarjeta:''; document.getElementById('ingreso-monto').value=i.monto; toggleTarjetaIngreso(); editIndexIngreso = index; const btn=document.getElementById('btn-ingreso'); btn.textContent="Actualizar"; btn.className="w-full bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg"; document.getElementById('btn-cancelar-ingreso').classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); }
+        function editarGasto(index) { const g = gastos[index]; document.getElementById('gasto-concepto').value=g.concepto; document.getElementById('gasto-fecha').value=g.fecha; document.getElementById('gasto-pagador').value=g.pagador; document.getElementById('gasto-metodo').value=g.metodo; if(g.metodo==='Tarjeta')document.getElementById('gasto-tarjeta-nombre').value=g.tarjeta!=='-'?g.tarjeta:''; document.getElementById('gasto-monto').value=g.monto; toggleTarjetaGasto(); editIndexGasto = index; const btn=document.getElementById('btn-gasto'); btn.textContent="Actualizar"; btn.className="w-full bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg"; document.getElementById('btn-cancelar-gasto').classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); }
+        function editarPrestamo(index) { const p = prestamos[index]; document.getElementById('prestamo-fecha').value=p.fecha; document.getElementById('prestamo-da').value=p.da; actualizarReceptor(); document.getElementById('prestamo-monto').value=p.monto; editIndexPrestamo = index; const btn=document.getElementById('btn-prestamo'); btn.textContent="Actualizar"; btn.className="w-full bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg mt-2 sm:mt-8"; document.getElementById('btn-cancelar-prestamo').classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); }
 
-        // CANCELAR EDICIÓN
-        function cancelarEdicionIngreso() { editIndexIngreso = null; document.getElementById('form-ingreso').reset(); document.getElementById('ingreso-fecha').valueAsDate = new Date(); toggleTarjetaIngreso(); const btn=document.getElementById('btn-ingreso'); btn.textContent="Guardar Ingreso"; btn.className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"; document.getElementById('btn-cancelar-ingreso').classList.add('hidden'); }
-        function cancelarEdicionGasto() { editIndexGasto = null; document.getElementById('form-gasto').reset(); document.getElementById('gasto-fecha').valueAsDate = new Date(); toggleTarjetaGasto(); const btn=document.getElementById('btn-gasto'); btn.textContent="Guardar Gasto"; btn.className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"; document.getElementById('btn-cancelar-gasto').classList.add('hidden'); }
-        function cancelarEdicionPrestamo() { editIndexPrestamo = null; document.getElementById('form-prestamo').reset(); document.getElementById('prestamo-fecha').valueAsDate = new Date(); actualizarReceptor(); const btn=document.getElementById('btn-prestamo'); btn.textContent="Guardar Préstamo"; btn.className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded mt-8"; document.getElementById('btn-cancelar-prestamo').classList.add('hidden'); }
-
+        function cancelarEdicionIngreso() { editIndexIngreso = null; document.getElementById('form-ingreso').reset(); document.getElementById('ingreso-fecha').valueAsDate = new Date(); toggleTarjetaIngreso(); const btn=document.getElementById('btn-ingreso'); btn.textContent="Guardar Ingreso"; btn.className="w-full bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-bold py-3 px-4 rounded-lg"; document.getElementById('btn-cancelar-ingreso').classList.add('hidden'); }
+        function cancelarEdicionGasto() { editIndexGasto = null; document.getElementById('form-gasto').reset(); document.getElementById('gasto-fecha').valueAsDate = new Date(); toggleTarjetaGasto(); const btn=document.getElementById('btn-gasto'); btn.textContent="Guardar Gasto"; btn.className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-3 px-4 rounded-lg"; document.getElementById('btn-cancelar-gasto').classList.add('hidden'); }
+        function cancelarEdicionPrestamo() { editIndexPrestamo = null; document.getElementById('form-prestamo').reset(); document.getElementById('prestamo-fecha').valueAsDate = new Date(); actualizarReceptor(); const btn=document.getElementById('btn-prestamo'); btn.textContent="Guardar Préstamo"; btn.className="w-full bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white font-bold py-3 px-4 rounded-lg mt-2 sm:mt-8"; document.getElementById('btn-cancelar-prestamo').classList.add('hidden'); }
 
         // ==========================================
         // 4. ACTUALIZACIÓN DE INTERFAZ Y CÁLCULOS
@@ -519,13 +533,31 @@
             let totalIngresos = 0, totalGastos = 0;
             let manoPapa = 0, manoHijo = 0;
 
-            // Ingresos
+            // Ingresos (Tabla combinada para mobile)
             const tbI = document.querySelector('#tabla-ingresos tbody'); tbI.innerHTML = '';
             ingresos.forEach((i, idx) => {
                 totalIngresos += i.monto;
                 if(i.receptor === 'Papá') manoPapa += i.monto;
                 if(i.receptor === 'Hijo') manoHijo += i.monto;
-                tbI.innerHTML += `<tr class="border-b"><td class="p-2 capitalize text-sm">${formatearFecha(i.fecha)}</td><td class="p-2">${i.tipo}</td><td class="p-2">${i.trabajo}</td><td class="p-2 font-bold">${i.receptor}</td><td class="p-2">${i.metodo}</td><td class="p-2 text-right text-green-700 font-bold">${formatoMoneda(i.monto)}</td><td class="p-2 text-center"><button onclick="editarIngreso(${idx})" class="mx-1">✏️</button><button onclick="eliminarIngreso(${idx})" class="text-red-500 mx-1">🗑️</button></td></tr>`;
+                tbI.innerHTML += `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-3 capitalize">
+                            <div class="font-bold text-gray-700">${formatearFecha(i.fecha)}</div>
+                        </td>
+                        <td class="p-3">
+                            <span class="px-2 py-1 bg-gray-100 rounded text-xs text-gray-600">${i.tipo}</span><br>
+                            <span class="text-gray-800 font-medium">${i.trabajo}</span>
+                        </td>
+                        <td class="p-3">
+                            <div class="font-bold text-gray-800">${i.receptor}</div>
+                            <div class="text-xs text-gray-500">${i.metodo}</div>
+                        </td>
+                        <td class="p-3 text-right text-green-700 font-bold">${formatoMoneda(i.monto)}</td>
+                        <td class="p-3 text-center">
+                            <button onclick="editarIngreso(${idx})" class="p-2 text-blue-600 active:bg-blue-100 rounded-full">✏️</button>
+                            <button onclick="eliminarIngreso(${idx})" class="p-2 text-red-600 active:bg-red-100 rounded-full">🗑️</button>
+                        </td>
+                    </tr>`;
             });
 
             // Gastos Separados
@@ -534,16 +566,22 @@
             
             gastos.forEach((g, idx) => {
                 totalGastos += g.monto;
-                const filaGasto = `<tr class="border-b"><td class="p-2 capitalize text-sm">${formatearFecha(g.fecha)}</td><td class="p-2">${g.concepto}</td><td class="p-2">${g.metodo}</td><td class="p-2 text-right text-red-700 font-bold">${formatoMoneda(g.monto)}</td><td class="p-2 text-center"><button onclick="editarGasto(${idx})" class="mx-1">✏️</button><button onclick="eliminarGasto(${idx})" class="text-red-500 mx-1">🗑️</button></td></tr>`;
+                const filaGasto = `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-3">
+                            <div class="capitalize text-xs text-gray-500">${formatearFecha(g.fecha)}</div>
+                            <div class="font-medium text-gray-800">${g.concepto}</div>
+                            <div class="text-xs text-gray-400">${g.metodo}</div>
+                        </td>
+                        <td class="p-3 text-right text-red-600 font-bold align-middle">${formatoMoneda(g.monto)}</td>
+                        <td class="p-3 text-center align-middle">
+                            <button onclick="editarGasto(${idx})" class="p-2 text-blue-600 active:bg-blue-100 rounded-full">✏️</button>
+                            <button onclick="eliminarGasto(${idx})" class="p-2 text-red-600 active:bg-red-100 rounded-full">🗑️</button>
+                        </td>
+                    </tr>`;
                 
-                if(g.pagador === 'Papá') {
-                    manoPapa -= g.monto;
-                    tbGPapa.innerHTML += filaGasto;
-                }
-                if(g.pagador === 'Hijo') {
-                    manoHijo -= g.monto;
-                    tbGHijo.innerHTML += filaGasto;
-                }
+                if(g.pagador === 'Papá') { manoPapa -= g.monto; tbGPapa.innerHTML += filaGasto; }
+                if(g.pagador === 'Hijo') { manoHijo -= g.monto; tbGHijo.innerHTML += filaGasto; }
             });
 
             // Préstamos
@@ -554,7 +592,19 @@
             prestamos.forEach((p, idx) => {
                 if(p.da === 'Papá') { manoPapa -= p.monto; manoHijo += p.monto; }
                 if(p.da === 'Hijo') { manoHijo -= p.monto; manoPapa += p.monto; }
-                tbP.innerHTML += `<tr class="border-b border-purple-100"><td class="p-2 capitalize text-sm">${formatearFecha(p.fecha)}</td><td class="p-2 font-bold text-red-600">${p.da} (Salió)</td><td class="p-2 font-bold text-green-600">${p.recibe} (Entró)</td><td class="p-2 text-right font-bold">${formatoMoneda(p.monto)}</td><td class="p-2 text-center"><button onclick="editarPrestamo(${idx})" class="mx-1">✏️</button><button onclick="eliminarPrestamo(${idx})" class="text-red-500 mx-1">🗑️</button></td></tr>`;
+                tbP.innerHTML += `
+                    <tr class="border-b border-purple-100 hover:bg-purple-100/50">
+                        <td class="p-3 capitalize text-gray-600">${formatearFecha(p.fecha)}</td>
+                        <td class="p-3">
+                            <div class="text-xs text-gray-500">De: <span class="font-bold text-red-600">${p.da}</span></div>
+                            <div class="text-xs text-gray-500">A: <span class="font-bold text-green-600">${p.recibe}</span></div>
+                        </td>
+                        <td class="p-3 text-right font-bold text-purple-700">${formatoMoneda(p.monto)}</td>
+                        <td class="p-3 text-center">
+                            <button onclick="editarPrestamo(${idx})" class="p-2 text-blue-600 active:bg-blue-100 rounded-full">✏️</button>
+                            <button onclick="eliminarPrestamo(${idx})" class="p-2 text-red-600 active:bg-red-100 rounded-full">🗑️</button>
+                        </td>
+                    </tr>`;
             });
 
             // Cálculos
@@ -576,9 +626,9 @@
             if(utilidad > 0) {
                 ajusteDiv.classList.remove('hidden');
                 const diferenciaPapa = manoPapa - gananciaPapa; 
-                if (diferenciaPapa > 0) ajusteTexto.innerHTML = `⚠️ <b>Papá</b> tiene dinero físico excedente. Debe entregarle <b>${formatoMoneda(Math.abs(diferenciaPapa))}</b> al <b>Hijo</b> para cuadrar las cuentas.`;
-                else if (diferenciaPapa < 0) ajusteTexto.innerHTML = `⚠️ <b>Hijo</b> tiene dinero físico excedente. Debe entregarle <b>${formatoMoneda(Math.abs(diferenciaPapa))}</b> a <b>Papá</b> para cuadrar las cuentas.`;
-                else ajusteTexto.innerHTML = `✅ Las cuentas están perfectamente cuadradas. Nadie debe transferir a nadie.`;
+                if (diferenciaPapa > 0) ajusteTexto.innerHTML = `⚠️ <b>Papá</b> tiene físico de más. Debe entregar <b>${formatoMoneda(Math.abs(diferenciaPapa))}</b> al <b>Hijo</b>.`;
+                else if (diferenciaPapa < 0) ajusteTexto.innerHTML = `⚠️ <b>Hijo</b> tiene físico de más. Debe entregar <b>${formatoMoneda(Math.abs(diferenciaPapa))}</b> a <b>Papá</b>.`;
+                else ajusteTexto.innerHTML = `✅ Las cuentas están perfectamente cuadradas.`;
             } else { ajusteDiv.classList.add('hidden'); }
         }
 
@@ -613,7 +663,6 @@
             doc.autoTable({ startY: y + 5, head: [['Fecha', 'Tipo', 'Concepto', 'Receptor', 'Método', 'Monto']], body: ingresos.map(i => [formatearFecha(i.fecha), i.tipo, i.trabajo, i.receptor, i.metodo, formatoMoneda(i.monto)]), theme: 'striped', headStyles: { fillColor: [46, 125, 50] } });
             y = doc.lastAutoTable.finalY + 15;
 
-            // Dividir Gastos en el PDF
             const gastosPapaList = gastos.filter(g => g.pagador === 'Papá');
             const gastosHijoList = gastos.filter(g => g.pagador === 'Hijo');
 
