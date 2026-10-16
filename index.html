@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contabilidad Empresa Familiar</title>
+    <!-- Tailwind CSS para los estilos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- jsPDF para generar el PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body { background-color: #f3f4f6; font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="p-6">
+
+    <div class="max-w-6xl mx-auto">
+        <!-- Encabezado y Logotipo -->
+        <div class="flex items-center justify-between mb-8 bg-white p-4 rounded-xl shadow">
+            <div class="flex items-center gap-4">
+                <img id="logo-img" src="" alt="Logo" class="h-16 hidden object-contain">
+                <h1 class="text-3xl font-bold text-gray-800">Contabilidad de la Empresa</h1>
+            </div>
+            <button onclick="generarPDF()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded shadow">
+                Generar PDF Completo
+            </button>
+        </div>
+
+        <!-- Gestor de Proyectos / Cuadernos -->
+        <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-xl shadow mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex-1 w-full">
+                <label class="block text-sm font-bold text-gray-700 mb-1">Proyecto / Cuaderno Actual:</label>
+                <select id="proyecto-selector" onchange="seleccionarProyecto()" class="w-full border rounded p-2 bg-white font-semibold">
+                    <option value="">Cargando proyectos...</option>
+                </select>
+            </div>
+            <div class="flex-1 w-full flex items-end">
+                <button onclick="crearNuevoProyecto()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded shadow w-full md:w-auto">
+                    + Crear Nuevo Cuaderno
+                </button>
+            </div>
+        </div>
+
+        <div id="app-content" class="hidden">
+            <!-- Formularios (3 Columnas) -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <!-- Registro de Ingresos -->
+                <div class="bg-white p-6 rounded-xl shadow">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">1. Ingreso (Anticipo)</h2>
+                    <form id="form-ingreso" onsubmit="agregarIngreso(event)">
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Tipo</label>
+                                <select id="ingreso-tipo" class="mt-1 block w-full border rounded p-2" required>
+                                    <option value="Anticipo">Anticipo</option>
+                                    <option value="Liquidación">Liquidación</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Fecha</label>
+                                <input type="date" id="ingreso-fecha" class="mt-1 block w-full border rounded p-2" required>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700">Concepto</label>
+                            <input type="text" id="ingreso-trabajo" placeholder="Ej. Instalación" class="mt-1 block w-full border rounded p-2" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700">¿Quién lo recibió?</label>
+                            <select id="ingreso-receptor" class="mt-1 block w-full border rounded p-2" required>
+                                <option value="Papá">Papá</option>
+                                <option value="Hijo">Hijo</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Método</label>
+                                <select id="ingreso-metodo" class="mt-1 block w-full border rounded p-2" required onchange="toggleTarjetaIngreso()">
+                                    <option value="Efectivo">Efectivo</option>
+                                    <option value="Tarjeta">Tarjeta</option>
+                                </select>
+                            </div>
+                            <div id="div-tarjeta-ingreso" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700">Tarjeta</label>
+                                <input type="text" id="ingreso-tarjeta-nombre" class="mt-1 block w-full border rounded p-2" placeholder="Ej. Bancomer">
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700">Monto (\$)</label>
+                            <input type="number" id="ingreso-monto" min="0" step="0.01" class="mt-1 block w-full border rounded p-2" required>
+                        </div>
+                        <button type="submit" id="btn-ingreso" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Guardar Ingreso</button>
+                        <button type="button" id="btn-cancelar-ingreso" onclick="cancelarEdicionIngreso()" class="hidden w-full mt-2 bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded">Cancelar</button>
+                    </form>
+                </div>
+
+                <!-- Registro de Gastos -->
+                <div class="bg-white p-6 rounded-xl shadow">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">2. Gasto / Compra</h2>
+                    <form id="form-gasto" onsubmit="agregarGasto(event)">
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div class="col-span-2">
+                                <label class="block text-sm font-medium text-gray-700">Concepto / Material</label>
+                                <input type="text" id="gasto-concepto" class="mt-1 block w-full border rounded p-2" required>
+                            </div>
+                            <div class="col-span-2">
+                                <label class="block text-sm font-medium text-gray-700">Fecha</label>
+                                <input type="date" id="gasto-fecha" class="mt-1 block w-full border rounded p-2" required>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700">¿Quién pagó el gasto?</label>
+                            <select id="gasto-pagador" class="mt-1 block w-full border rounded p-2" required>
+                                <option value="Papá">Papá</option>
+                                <option value="Hijo">Hijo</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Método</label>
+                                <select id="gasto-metodo" class="mt-1 block w-full border rounded p-2" required onchange="toggleTarjetaGasto()">
+                                    <option value="Efectivo">Efectivo</option>
+                                    <option value="Tarjeta">Tarjeta</option>
+                                </select>
+                            </div>
+                            <div id="div-tarjeta-gasto" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700">Tarjeta</label>
+                                <input type="text" id="gasto-tarjeta-nombre" class="mt-1 block w-full border rounded p-2" placeholder="Ej. Santander">
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700">Monto (\$)</label>
+                            <input type="number" id="gasto-monto" min="0" step="0.01" class="mt-1 block w-full border rounded p-2" required>
+                        </div>
+                        <button type="submit" id="btn-gasto" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Guardar Gasto</button>
+                        <button type="button" id="btn-cancelar-gasto" onclick="cancelarEdicionGasto()" class="hidden w-full mt-2 bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded">Cancelar</button>
+                    </form>
+                </div>
+
+                <!-- Registro de Préstamos/Adelantos -->
+                <div class="bg-white p-6 rounded-xl shadow border-2 border-purple-200">
+                    <h2 class="text-xl font-bold text-purple-800 mb-4 border-b pb-2">3. Préstamo / Adelanto</h2>
+                    <form id="form-prestamo" onsubmit="agregarPrestamo(event)">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700">Fecha</label>
+                            <input type="date" id="prestamo-fecha" class="mt-1 block w-full border rounded p-2" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700">¿Quién da el dinero?</label>
+                            <select id="prestamo-da" class="mt-1 block w-full border rounded p-2" required onchange="actualizarReceptor()">
+                                <option value="Papá">Papá</option>
+                                <option value="Hijo">Hijo</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700">¿Quién lo recibe?</label>
+                            <input type="text" id="prestamo-recibe" value="Hijo" class="mt-1 block w-full border rounded p-2 bg-gray-100 font-bold" readonly>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700">Monto (\$)</label>
+                            <input type="number" id="prestamo-monto" min="0" step="0.01" class="mt-1 block w-full border rounded p-2" required>
+                        </div>
+                        <button type="submit" id="btn-prestamo" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded mt-8">Guardar Préstamo</button>
+                        <button type="button" id="btn-cancelar-prestamo" onclick="cancelarEdicionPrestamo()" class="hidden w-full mt-2 bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded">Cancelar</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Ajuste de Cuentas (Quién debe a quién) -->
+            <div id="ajuste-cuentas" class="bg-yellow-100 border-l-4 border-yellow-500 p-6 rounded-xl shadow mb-8 hidden">
+                <h2 class="text-xl font-bold text-yellow-800 mb-2">Ajuste Final de Cuentas</h2>
+                <p id="texto-ajuste" class="text-lg text-yellow-900 font-medium"></p>
+            </div>
+
+            <!-- Resumen de Totales y Dinero en Mano -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                <!-- Resumen Financiero -->
+                <div class="bg-white p-6 rounded-xl shadow">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Resumen Financiero (El Negocio)</h2>
+                    <div class="space-y-3 text-lg">
+                        <div class="flex justify-between border-b pb-1"><span>Total Ingresos (Bruto):</span> <span class="font-bold text-green-600" id="res-ingresos">$0.00</span></div>
+                        <div class="flex justify-between border-b pb-1"><span>Total Gastos (Inversión):</span> <span class="font-bold text-red-600" id="res-gastos">\$0.00</span></div>
+                        <div class="flex justify-between border-b pb-1"><span>Utilidad Libre (Ganancia):</span> <span class="font-bold text-blue-600" id="res-utilidad">\$0.00</span></div>
+                        
+                        <div class="mt-4 bg-gray-50 p-4 rounded">
+                            <h3 class="font-bold text-gray-700 mb-2">Ganancia que le toca a cada uno:</h3>
+                            <div class="flex justify-between"><span>Papá (55%):</span> <span class="font-bold" id="res-papa-ganancia">\$0.00</span></div>
+                            <div class="flex justify-between"><span>Hijo (45%):</span> <span class="font-bold" id="res-hijo-ganancia">\$0.00</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dinero Físico en Mano -->
+                <div class="bg-white p-6 rounded-xl shadow">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Dinero Físico en la Bolsa</h2>
+                    <p class="text-sm text-gray-500 mb-4">Lo que cada quien tiene físicamente (Anticipos cobrados + Préstamos recibidos - Gastos pagados - Préstamos dados).</p>
+                    <div class="space-y-4 text-lg">
+                        <div class="bg-gray-50 p-4 rounded border-l-4 border-gray-400">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-bold">Papá tiene físicamente:</span> 
+                                <span class="font-bold text-2xl" id="res-papa-mano">\$0.00</span>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded border-l-4 border-gray-400">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-bold">Hijo tiene físicamente:</span> 
+                                <span class="font-bold text-2xl" id="res-hijo-mano">\$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tablas de Historial -->
+            <div class="grid grid-cols-1 gap-8">
+                <!-- Tabla Préstamos -->
+                <div id="contenedor-tabla-prestamos" class="bg-purple-50 p-6 rounded-xl shadow overflow-x-auto hidden border border-purple-200">
+                    <h2 class="text-xl font-bold text-purple-800 mb-4 border-b border-purple-200 pb-2">Historial de Adelantos / Préstamos</h2>
+                    <table class="w-full text-left border-collapse" id="tabla-prestamos">
+                        <thead>
+                            <tr class="bg-purple-100">
+                                <th class="p-2 border-b border-purple-200">Fecha</th>
+                                <th class="p-2 border-b border-purple-200">Dio el dinero</th>
+                                <th class="p-2 border-b border-purple-200">Recibió el dinero</th>
+                                <th class="p-2 border-b border-purple-200 text-right">Monto</th>
+                                <th class="p-2 border-b border-purple-200 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <!-- Tabla Ingresos -->
+                <div class="bg-white p-6 rounded-xl shadow overflow-x-auto">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Historial de Ingresos</h2>
+                    <table class="w-full text-left border-collapse" id="tabla-ingresos">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="p-2 border-b">Fecha</th>
+                                <th class="p-2 border-b">Tipo</th>
+                                <th class="p-2 border-b">Trabajo</th>
+                                <th class="p-2 border-b">Receptor</th>
+                                <th class="p-2 border-b">Método</th>
+                                <th class="p-2 border-b text-right">Monto</th>
+                                <th class="p-2 border-b text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <!-- Tablas de Gastos (SEPARADOS) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Gastos Papá -->
+                    <div class="bg-white p-6 rounded-xl shadow overflow-x-auto border-t-4 border-blue-500">
+                        <h2 class="text-xl font-bold text-blue-800 mb-4 border-b pb-2">Gastos - Papá</h2>
+                        <table class="w-full text-left border-collapse" id="tabla-gastos-papa">
+                            <thead>
+                                <tr class="bg-blue-50">
+                                    <th class="p-2 border-b">Fecha</th>
+                                    <th class="p-2 border-b">Concepto</th>
+                                    <th class="p-2 border-b">Método</th>
+                                    <th class="p-2 border-b text-right">Monto</th>
+                                    <th class="p-2 border-b text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <!-- Gastos Hijo -->
+                    <div class="bg-white p-6 rounded-xl shadow overflow-x-auto border-t-4 border-teal-500">
+                        <h2 class="text-xl font-bold text-teal-800 mb-4 border-b pb-2">Gastos - Hijo</h2>
+                        <table class="w-full text-left border-collapse" id="tabla-gastos-hijo">
+                            <thead>
+                                <tr class="bg-teal-50">
+                                    <th class="p-2 border-b">Fecha</th>
+                                    <th class="p-2 border-b">Concepto</th>
+                                    <th class="p-2 border-b">Método</th>
+                                    <th class="p-2 border-b text-right">Monto</th>
+                                    <th class="p-2 border-b text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. CONFIGURACIÓN DE TU LOGOTIPO Y FIREBASE
+        // ==========================================
+        const LOGO_URL = "https://res.cloudinary.com/ittxlkln/image/upload/v1792126734/LOGO_PORTADA.jpg";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDj64oviwVAumRXZGIju1TDEwNsf5Pvvw0",
+            authDomain: "mstcuentas-65b4a.firebaseapp.com",
+            projectId: "mstcuentas-65b4a",
+            storageBucket: "mstcuentas-65b4a.firebasestorage.app",
+            messagingSenderId: "28311788491",
+            appId: "1:28311788491:web:00db318f0f02af0d9a344e"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+
+        // Variables Globales
+        let ingresos = [];
+        let gastos = [];
+        let prestamos = [];
+        let unsubscribe = null; 
+        let proyectoActualId = null;
+        let proyectoActualNombre = "";
+        
+        let editIndexIngreso = null;
+        let editIndexGasto = null;
+        let editIndexPrestamo = null;
+
+        // ==========================================
+        // 2. LÓGICA DE PROYECTOS / CUADERNOS
+        // ==========================================
+        function initApp() {
+            if(LOGO_URL && LOGO_URL !== "https://tu-sitio.com/ruta-a-tu-logo.png") {
+                const logoImg = document.getElementById('logo-img');
+                logoImg.src = LOGO_URL;
+                logoImg.classList.remove('hidden');
+            }
+
+            document.getElementById('ingreso-fecha').valueAsDate = new Date();
+            document.getElementById('gasto-fecha').valueAsDate = new Date();
+            document.getElementById('prestamo-fecha').valueAsDate = new Date();
+            cargarProyectos();
+        }
+
+        function cargarProyectos() {
+            db.collection("proyectos").orderBy("createdAt", "desc").onSnapshot((snapshot) => {
+                const selector = document.getElementById('proyecto-selector');
+                selector.innerHTML = '<option value="">-- Selecciona un Cuaderno --</option>';
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const option = document.createElement('option');
+                    option.value = doc.id;
+                    option.textContent = data.nombre;
+                    selector.appendChild(option);
+                });
+
+                if(proyectoActualId) {
+                    selector.value = proyectoActualId;
+                }
+            });
+        }
+
+        async function crearNuevoProyecto() {
+            const nombre = prompt("Ingresa el nombre para el nuevo cuaderno (Ej. Obra Residencial Marzo):");
+            if (!nombre) return;
+
+            try {
+                const docRef = await db.collection("proyectos").add({
+                    nombre: nombre,
+                    ingresos: [],
+                    gastos: [],
+                    prestamos: [],
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                document.getElementById('proyecto-selector').value = docRef.id;
+                seleccionarProyecto();
+            } catch (error) {
+                console.error("Error al crear proyecto:", error);
+                alert("Hubo un error al crear el cuaderno. Revisa la consola.");
+            }
+        }
+
+        function seleccionarProyecto() {
+            const selector = document.getElementById('proyecto-selector');
+            proyectoActualId = selector.value;
+            proyectoActualNombre = selector.options[selector.selectedIndex]?.text || "";
+
+            if (!proyectoActualId) {
+                document.getElementById('app-content').classList.add('hidden');
+                if(unsubscribe) unsubscribe();
+                return;
+            }
+
+            document.getElementById('app-content').classList.remove('hidden');
+            if(unsubscribe) unsubscribe();
+
+            unsubscribe = db.collection("proyectos").doc(proyectoActualId).onSnapshot((doc) => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    
+                    // Función para ordenar por fecha de más antiguo a más reciente
+                    const ordenarPorFecha = (a, b) => new Date(a.fecha) - new Date(b.fecha);
+
+                    ingresos = (data.ingresos || []).sort(ordenarPorFecha);
+                    gastos = (data.gastos || []).sort(ordenarPorFecha);
+                    prestamos = (data.prestamos || []).sort(ordenarPorFecha);
+                    
+                    actualizarInterfaz();
+                }
+            });
+        }
+
+        // ==========================================
+        // FUNCIONES DE TEXTO Y FORMATO
+        // ==========================================
+        function formatearFecha(fechaString) {
+            if (!fechaString) return "";
+            const partes = fechaString.split('-');
+            if (partes.length !== 3) return fechaString; 
+            const fecha = new Date(partes[0], partes[1] - 1, partes[2]);
+            const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            return fecha.toLocaleDateString('es-MX', opciones);
+        }
+
+        function formatoMoneda(valor) { 
+            return "\$" + valor.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2}); 
+        }
+
+        // ==========================================
+        // 3. LÓGICA DE FORMULARIOS Y EDICIÓN
+        // ==========================================
+        function toggleTarjetaIngreso() {
+            const met = document.getElementById('ingreso-metodo').value;
+            document.getElementById('div-tarjeta-ingreso').classList.toggle('hidden', met !== 'Tarjeta');
+        }
+
+        function toggleTarjetaGasto() {
+            const met = document.getElementById('gasto-metodo').value;
+            document.getElementById('div-tarjeta-gasto').classList.toggle('hidden', met !== 'Tarjeta');
+        }
+
+        function actualizarReceptor() {
+            const da = document.getElementById('prestamo-da').value;
+            document.getElementById('prestamo-recibe').value = da === "Papá" ? "Hijo" : "Papá";
+        }
+
+        async function agregarIngreso(e) {
+            e.preventDefault();
+            const tipo = document.getElementById('ingreso-tipo').value;
+            const fecha = document.getElementById('ingreso-fecha').value;
+            const trabajo = document.getElementById('ingreso-trabajo').value;
+            const receptor = document.getElementById('ingreso-receptor').value;
+            const metodo = document.getElementById('ingreso-metodo').value;
+            const tarjeta = metodo === 'Tarjeta' ? document.getElementById('ingreso-tarjeta-nombre').value : '-';
+            const monto = parseFloat(document.getElementById('ingreso-monto').value);
+
+            let actualizados = [...ingresos];
+            if (editIndexIngreso !== null) { actualizados[editIndexIngreso] = { tipo, fecha, trabajo, receptor, metodo, tarjeta, monto }; cancelarEdicionIngreso(); }
+            else { actualizados.push({ tipo, fecha, trabajo, receptor, metodo, tarjeta, monto }); }
+            
+            await db.collection("proyectos").doc(proyectoActualId).update({ ingresos: actualizados });
+            document.getElementById('form-ingreso').reset(); document.getElementById('ingreso-fecha').valueAsDate = new Date(); toggleTarjetaIngreso();
+        }
+
+        async function agregarGasto(e) {
+            e.preventDefault();
+            const concepto = document.getElementById('gasto-concepto').value;
+            const fecha = document.getElementById('gasto-fecha').value;
+            const pagador = document.getElementById('gasto-pagador').value;
+            const metodo = document.getElementById('gasto-metodo').value;
+            const tarjeta = metodo === 'Tarjeta' ? document.getElementById('gasto-tarjeta-nombre').value : '-';
+            const monto = parseFloat(document.getElementById('gasto-monto').value);
+
+            let actualizados = [...gastos];
+            if (editIndexGasto !== null) { actualizados[editIndexGasto] = { concepto, fecha, pagador, metodo, tarjeta, monto }; cancelarEdicionGasto(); }
+            else { actualizados.push({ concepto, fecha, pagador, metodo, tarjeta, monto }); }
+            
+            await db.collection("proyectos").doc(proyectoActualId).update({ gastos: actualizados });
+            document.getElementById('form-gasto').reset(); document.getElementById('gasto-fecha').valueAsDate = new Date(); toggleTarjetaGasto();
+        }
+
+        async function agregarPrestamo(e) {
+            e.preventDefault();
+            const fecha = document.getElementById('prestamo-fecha').value;
+            const da = document.getElementById('prestamo-da').value;
+            const recibe = document.getElementById('prestamo-recibe').value;
+            const monto = parseFloat(document.getElementById('prestamo-monto').value);
+
+            let actualizados = [...prestamos];
+            if (editIndexPrestamo !== null) { actualizados[editIndexPrestamo] = { fecha, da, recibe, monto }; cancelarEdicionPrestamo(); }
+            else { actualizados.push({ fecha, da, recibe, monto }); }
+            
+            await db.collection("proyectos").doc(proyectoActualId).update({ prestamos: actualizados });
+            document.getElementById('form-prestamo').reset(); document.getElementById('prestamo-fecha').valueAsDate = new Date(); actualizarReceptor();
+        }
+
+        // ELIMINAR
+        async function eliminarIngreso(index) { if(confirm("¿Eliminar?")) { let actualizados = [...ingresos]; actualizados.splice(index, 1); await db.collection("proyectos").doc(proyectoActualId).update({ ingresos: actualizados }); } }
+        async function eliminarGasto(index) { if(confirm("¿Eliminar?")) { let actualizados = [...gastos]; actualizados.splice(index, 1); await db.collection("proyectos").doc(proyectoActualId).update({ gastos: actualizados }); } }
+        async function eliminarPrestamo(index) { if(confirm("¿Eliminar?")) { let actualizados = [...prestamos]; actualizados.splice(index, 1); await db.collection("proyectos").doc(proyectoActualId).update({ prestamos: actualizados }); } }
+
+        // EDITAR
+        function editarIngreso(index) { const i = ingresos[index]; document.getElementById('ingreso-tipo').value=i.tipo; document.getElementById('ingreso-fecha').value=i.fecha; document.getElementById('ingreso-trabajo').value=i.trabajo; document.getElementById('ingreso-receptor').value=i.receptor; document.getElementById('ingreso-metodo').value=i.metodo; if(i.metodo==='Tarjeta')document.getElementById('ingreso-tarjeta-nombre').value=i.tarjeta!=='-'?i.tarjeta:''; document.getElementById('ingreso-monto').value=i.monto; toggleTarjetaIngreso(); editIndexIngreso = index; const btn=document.getElementById('btn-ingreso'); btn.textContent="Actualizar"; btn.className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded"; document.getElementById('btn-cancelar-ingreso').classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); }
+        function editarGasto(index) { const g = gastos[index]; document.getElementById('gasto-concepto').value=g.concepto; document.getElementById('gasto-fecha').value=g.fecha; document.getElementById('gasto-pagador').value=g.pagador; document.getElementById('gasto-metodo').value=g.metodo; if(g.metodo==='Tarjeta')document.getElementById('gasto-tarjeta-nombre').value=g.tarjeta!=='-'?g.tarjeta:''; document.getElementById('gasto-monto').value=g.monto; toggleTarjetaGasto(); editIndexGasto = index; const btn=document.getElementById('btn-gasto'); btn.textContent="Actualizar"; btn.className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded"; document.getElementById('btn-cancelar-gasto').classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); }
+        function editarPrestamo(index) { const p = prestamos[index]; document.getElementById('prestamo-fecha').value=p.fecha; document.getElementById('prestamo-da').value=p.da; actualizarReceptor(); document.getElementById('prestamo-monto').value=p.monto; editIndexPrestamo = index; const btn=document.getElementById('btn-prestamo'); btn.textContent="Actualizar"; btn.className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded mt-8"; document.getElementById('btn-cancelar-prestamo').classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); }
+
+        // CANCELAR EDICIÓN
+        function cancelarEdicionIngreso() { editIndexIngreso = null; document.getElementById('form-ingreso').reset(); document.getElementById('ingreso-fecha').valueAsDate = new Date(); toggleTarjetaIngreso(); const btn=document.getElementById('btn-ingreso'); btn.textContent="Guardar Ingreso"; btn.className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"; document.getElementById('btn-cancelar-ingreso').classList.add('hidden'); }
+        function cancelarEdicionGasto() { editIndexGasto = null; document.getElementById('form-gasto').reset(); document.getElementById('gasto-fecha').valueAsDate = new Date(); toggleTarjetaGasto(); const btn=document.getElementById('btn-gasto'); btn.textContent="Guardar Gasto"; btn.className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"; document.getElementById('btn-cancelar-gasto').classList.add('hidden'); }
+        function cancelarEdicionPrestamo() { editIndexPrestamo = null; document.getElementById('form-prestamo').reset(); document.getElementById('prestamo-fecha').valueAsDate = new Date(); actualizarReceptor(); const btn=document.getElementById('btn-prestamo'); btn.textContent="Guardar Préstamo"; btn.className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded mt-8"; document.getElementById('btn-cancelar-prestamo').classList.add('hidden'); }
+
+
+        // ==========================================
+        // 4. ACTUALIZACIÓN DE INTERFAZ Y CÁLCULOS
+        // ==========================================
+        function actualizarInterfaz() {
+            let totalIngresos = 0, totalGastos = 0;
+            let manoPapa = 0, manoHijo = 0;
+
+            // Ingresos
+            const tbI = document.querySelector('#tabla-ingresos tbody'); tbI.innerHTML = '';
+            ingresos.forEach((i, idx) => {
+                totalIngresos += i.monto;
+                if(i.receptor === 'Papá') manoPapa += i.monto;
+                if(i.receptor === 'Hijo') manoHijo += i.monto;
+                tbI.innerHTML += `<tr class="border-b"><td class="p-2 capitalize text-sm">${formatearFecha(i.fecha)}</td><td class="p-2">${i.tipo}</td><td class="p-2">${i.trabajo}</td><td class="p-2 font-bold">${i.receptor}</td><td class="p-2">${i.metodo}</td><td class="p-2 text-right text-green-700 font-bold">${formatoMoneda(i.monto)}</td><td class="p-2 text-center"><button onclick="editarIngreso(${idx})" class="mx-1">✏️</button><button onclick="eliminarIngreso(${idx})" class="text-red-500 mx-1">🗑️</button></td></tr>`;
+            });
+
+            // Gastos Separados
+            const tbGPapa = document.querySelector('#tabla-gastos-papa tbody'); tbGPapa.innerHTML = '';
+            const tbGHijo = document.querySelector('#tabla-gastos-hijo tbody'); tbGHijo.innerHTML = '';
+            
+            gastos.forEach((g, idx) => {
+                totalGastos += g.monto;
+                const filaGasto = `<tr class="border-b"><td class="p-2 capitalize text-sm">${formatearFecha(g.fecha)}</td><td class="p-2">${g.concepto}</td><td class="p-2">${g.metodo}</td><td class="p-2 text-right text-red-700 font-bold">${formatoMoneda(g.monto)}</td><td class="p-2 text-center"><button onclick="editarGasto(${idx})" class="mx-1">✏️</button><button onclick="eliminarGasto(${idx})" class="text-red-500 mx-1">🗑️</button></td></tr>`;
+                
+                if(g.pagador === 'Papá') {
+                    manoPapa -= g.monto;
+                    tbGPapa.innerHTML += filaGasto;
+                }
+                if(g.pagador === 'Hijo') {
+                    manoHijo -= g.monto;
+                    tbGHijo.innerHTML += filaGasto;
+                }
+            });
+
+            // Préstamos
+            const tbP = document.querySelector('#tabla-prestamos tbody'); tbP.innerHTML = '';
+            if(prestamos.length > 0) document.getElementById('contenedor-tabla-prestamos').classList.remove('hidden');
+            else document.getElementById('contenedor-tabla-prestamos').classList.add('hidden');
+            
+            prestamos.forEach((p, idx) => {
+                if(p.da === 'Papá') { manoPapa -= p.monto; manoHijo += p.monto; }
+                if(p.da === 'Hijo') { manoHijo -= p.monto; manoPapa += p.monto; }
+                tbP.innerHTML += `<tr class="border-b border-purple-100"><td class="p-2 capitalize text-sm">${formatearFecha(p.fecha)}</td><td class="p-2 font-bold text-red-600">${p.da} (Salió)</td><td class="p-2 font-bold text-green-600">${p.recibe} (Entró)</td><td class="p-2 text-right font-bold">${formatoMoneda(p.monto)}</td><td class="p-2 text-center"><button onclick="editarPrestamo(${idx})" class="mx-1">✏️</button><button onclick="eliminarPrestamo(${idx})" class="text-red-500 mx-1">🗑️</button></td></tr>`;
+            });
+
+            // Cálculos
+            const utilidad = totalIngresos - totalGastos;
+            const gananciaPapa = utilidad > 0 ? (utilidad * 0.55) : 0;
+            const gananciaHijo = utilidad > 0 ? (utilidad * 0.45) : 0;
+
+            document.getElementById('res-ingresos').innerText = formatoMoneda(totalIngresos);
+            document.getElementById('res-gastos').innerText = formatoMoneda(totalGastos);
+            document.getElementById('res-utilidad').innerText = formatoMoneda(utilidad);
+            document.getElementById('res-papa-ganancia').innerText = formatoMoneda(gananciaPapa);
+            document.getElementById('res-hijo-ganancia').innerText = formatoMoneda(gananciaHijo);
+            document.getElementById('res-papa-mano').innerText = formatoMoneda(manoPapa);
+            document.getElementById('res-hijo-mano').innerText = formatoMoneda(manoHijo);
+
+            // Ajuste
+            const ajusteDiv = document.getElementById('ajuste-cuentas');
+            const ajusteTexto = document.getElementById('texto-ajuste');
+            if(utilidad > 0) {
+                ajusteDiv.classList.remove('hidden');
+                const diferenciaPapa = manoPapa - gananciaPapa; 
+                if (diferenciaPapa > 0) ajusteTexto.innerHTML = `⚠️ <b>Papá</b> tiene dinero físico excedente. Debe entregarle <b>${formatoMoneda(Math.abs(diferenciaPapa))}</b> al <b>Hijo</b> para cuadrar las cuentas.`;
+                else if (diferenciaPapa < 0) ajusteTexto.innerHTML = `⚠️ <b>Hijo</b> tiene dinero físico excedente. Debe entregarle <b>${formatoMoneda(Math.abs(diferenciaPapa))}</b> a <b>Papá</b> para cuadrar las cuentas.`;
+                else ajusteTexto.innerHTML = `✅ Las cuentas están perfectamente cuadradas. Nadie debe transferir a nadie.`;
+            } else { ajusteDiv.classList.add('hidden'); }
+        }
+
+        // ==========================================
+        // 5. GENERACIÓN DE PDF
+        // ==========================================
+        function generarPDF() {
+            if(!proyectoActualId) return alert("Selecciona un cuaderno primero.");
+            const { jsPDF } = window.jspdf; const doc = new jsPDF(); const pageWidth = doc.internal.pageSize.width; let y = 20;
+
+            doc.setFontSize(20); doc.text("Reporte de Contabilidad", pageWidth / 2, y, { align: "center" }); y += 8;
+            doc.setFontSize(12); doc.text(`Proyecto: ${proyectoActualNombre}`, pageWidth / 2, y, { align: "center" }); doc.text(`Fecha: ${new Date().toLocaleDateString()}`, pageWidth / 2, y + 6, { align: "center" }); y += 20;
+
+            doc.setFontSize(14); doc.text("1. Resumen Financiero y Ajuste", 14, y); y += 5;
+            const resumenData = [
+                ["Ingresos Brutos", document.getElementById('res-ingresos').innerText], ["Gastos", document.getElementById('res-gastos').innerText], ["Utilidad Libre", document.getElementById('res-utilidad').innerText],
+                ["Ganancia Papá (55%)", document.getElementById('res-papa-ganancia').innerText], ["Ganancia Hijo (45%)", document.getElementById('res-hijo-ganancia').innerText],
+                ["Dinero físico Papá", document.getElementById('res-papa-mano').innerText], ["Dinero físico Hijo", document.getElementById('res-hijo-mano').innerText],
+                ["AJUSTE FINAL", document.getElementById('texto-ajuste').innerText.replace('⚠️', '').replace('✅', '').trim()]
+            ];
+            doc.autoTable({ startY: y, body: resumenData, theme: 'grid', columnStyles: { 0: { fontStyle: 'bold', fillColor: [240, 240, 240] } } }); y = doc.lastAutoTable.finalY + 15;
+
+            if(prestamos.length > 0) {
+                if(y > 250) { doc.addPage(); y = 20; }
+                doc.setFontSize(14); doc.text("2. Adelantos / Préstamos", 14, y);
+                doc.autoTable({ startY: y + 5, head: [['Fecha', 'Dio el dinero', 'Recibió el dinero', 'Monto']], body: prestamos.map(p => [formatearFecha(p.fecha), p.da, p.recibe, formatoMoneda(p.monto)]), theme: 'striped', headStyles: { fillColor: [106, 27, 154] } });
+                y = doc.lastAutoTable.finalY + 15;
+            }
+
+            if(y > 220) { doc.addPage(); y = 20; }
+            doc.setFontSize(14); doc.text("3. Desglose de Ingresos", 14, y);
+            doc.autoTable({ startY: y + 5, head: [['Fecha', 'Tipo', 'Concepto', 'Receptor', 'Método', 'Monto']], body: ingresos.map(i => [formatearFecha(i.fecha), i.tipo, i.trabajo, i.receptor, i.metodo, formatoMoneda(i.monto)]), theme: 'striped', headStyles: { fillColor: [46, 125, 50] } });
+            y = doc.lastAutoTable.finalY + 15;
+
+            // Dividir Gastos en el PDF
+            const gastosPapaList = gastos.filter(g => g.pagador === 'Papá');
+            const gastosHijoList = gastos.filter(g => g.pagador === 'Hijo');
+
+            if(gastosPapaList.length > 0) {
+                if(y > 220) { doc.addPage(); y = 20; }
+                doc.setFontSize(14); doc.text("4. Gastos Pagados por Papá", 14, y);
+                doc.autoTable({ startY: y + 5, head: [['Fecha', 'Concepto', 'Método', 'Monto']], body: gastosPapaList.map(g => [formatearFecha(g.fecha), g.concepto, g.metodo, formatoMoneda(g.monto)]), theme: 'striped', headStyles: { fillColor: [25, 118, 210] } });
+                y = doc.lastAutoTable.finalY + 15;
+            }
+
+            if(gastosHijoList.length > 0) {
+                if(y > 220) { doc.addPage(); y = 20; }
+                doc.setFontSize(14); doc.text("5. Gastos Pagados por Hijo", 14, y);
+                doc.autoTable({ startY: y + 5, head: [['Fecha', 'Concepto', 'Método', 'Monto']], body: gastosHijoList.map(g => [formatearFecha(g.fecha), g.concepto, g.metodo, formatoMoneda(g.monto)]), theme: 'striped', headStyles: { fillColor: [0, 150, 136] } });
+            }
+
+            doc.save(`Contabilidad_${proyectoActualNombre.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+        }
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
