@@ -25,7 +25,7 @@
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px;}
     </style>
 </head>
-<body class="pb-20"> <!-- Padding bottom para que el scroll no quede tapado -->
+<body class="pb-20">
 
     <!-- BARRA SUPERIOR FIJA (Sticky Header) -->
     <div class="sticky top-0 z-50 bg-white/95 backdrop-blur shadow-md px-4 py-3 mb-6 flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-gray-200 w-full">
@@ -48,14 +48,14 @@
         </button>
     </div>
 
-    <!-- Contenedor Principal Limitado -->
+    <!-- Contenedor Principal -->
     <div class="max-w-6xl mx-auto px-2 sm:px-6">
 
         <!-- Lista oculta para autocompletar las tarjetas -->
         <datalist id="lista-tarjetas"></datalist>
 
         <div id="app-content" class="hidden">
-            <!-- Formularios (Se apilan en mobile, 3 columnas en PC) -->
+            <!-- Formularios -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
                 
                 <!-- Registro de Ingresos -->
@@ -182,22 +182,21 @@
                 </div>
             </div>
 
-            <!-- Ajuste de Cuentas (Quién debe a quién) -->
+            <!-- Ajuste Final de Cuentas -->
             <div id="ajuste-cuentas" class="bg-yellow-100 border-l-4 border-yellow-500 p-4 sm:p-6 rounded-xl shadow mb-6 hidden">
                 <h2 class="text-lg sm:text-xl font-bold text-yellow-800 mb-2">⚖️ Ajuste Final de Cuentas</h2>
                 <p id="texto-ajuste" class="text-sm sm:text-lg text-yellow-900 font-medium leading-tight"></p>
             </div>
 
-            <!-- Resumen de Totales y Dinero en Mano -->
+            <!-- Resumen Financiero y Dinero Físico -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
-                <!-- Resumen Financiero -->
+                <!-- Resumen -->
                 <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
                     <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">📊 Resumen Financiero</h2>
                     <div class="space-y-3 text-sm sm:text-base">
                         <div class="flex justify-between border-b pb-2"><span class="text-gray-600">Total Ingresos:</span> <span class="font-bold text-green-600" id="res-ingresos">$0.00</span></div>
                         <div class="flex justify-between border-b pb-2"><span class="text-gray-600">Total Gastos:</span> <span class="font-bold text-red-600" id="res-gastos">$0.00</span></div>
                         <div class="flex justify-between border-b pb-2"><span class="text-gray-600">Utilidad Libre:</span> <span class="font-bold text-blue-600 text-lg" id="res-utilidad">$0.00</span></div>
-                        
                         <div class="mt-4 bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-200">
                             <h3 class="font-bold text-gray-700 mb-2 text-xs uppercase">Ganancia Neta:</h3>
                             <div class="flex justify-between mb-1"><span class="text-gray-700">Papá (55%):</span> <span class="font-bold" id="res-papa-ganancia">$0.00</span></div>
@@ -206,7 +205,7 @@
                     </div>
                 </div>
 
-                <!-- Dinero Físico en Mano -->
+                <!-- Dinero Físico -->
                 <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
                     <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">💵 Dinero Físico (En la Bolsa)</h2>
                     <div class="space-y-4 text-sm sm:text-base">
@@ -315,7 +314,7 @@
 
     <script>
         // ==========================================
-        // 1. CONFIGURACIÓN
+        // 1. CONFIGURACIÓN FIREBASE
         // ==========================================
         const LOGO_URL = "https://res.cloudinary.com/ittxlkln/image/upload/v1792126734/LOGO_PORTADA.jpg";
         
@@ -345,9 +344,17 @@
         let editIndexGasto = null;
         let editIndexPrestamo = null;
 
-        // --- SISTEMA DE TARJETAS GUARDADAS ---
-        // Se guarda en el dispositivo para que esté disponible rápido en cualquier proyecto
-        let tarjetasGuardadas = JSON.parse(localStorage.getItem("tarjetasEmpresaFamiliar")) || [];
+        // --- SISTEMA DE TARJETAS GUARDADAS (Blindado contra WebView) ---
+        let tarjetasGuardadas = [];
+        
+        try {
+            const guardadas = localStorage.getItem("tarjetasEmpresaFamiliar");
+            if(guardadas) {
+                tarjetasGuardadas = JSON.parse(guardadas);
+            }
+        } catch(error) {
+            console.warn("localStorage no disponible en este WebView.", error);
+        }
 
         function actualizarListaTarjetas() {
             const dl = document.getElementById('lista-tarjetas');
@@ -364,13 +371,17 @@
             const nombreLimpio = nombre.trim();
             if (nombreLimpio.length > 0 && !tarjetasGuardadas.includes(nombreLimpio)) {
                 tarjetasGuardadas.push(nombreLimpio);
-                localStorage.setItem("tarjetasEmpresaFamiliar", JSON.stringify(tarjetasGuardadas));
+                try {
+                    localStorage.setItem("tarjetasEmpresaFamiliar", JSON.stringify(tarjetasGuardadas));
+                } catch(error) {
+                    // Si falla el WebView, lo ignoramos y seguimos ejecutando todo
+                }
                 actualizarListaTarjetas();
             }
         }
 
         // ==========================================
-        // 2. LÓGICA DE PROYECTOS / CUADERNOS
+        // 2. LÓGICA DE PROYECTOS
         // ==========================================
         function initApp() {
             if(LOGO_URL && LOGO_URL !== "https://tu-sitio.com/ruta-a-tu-logo.png") {
@@ -455,7 +466,7 @@
         }
 
         // ==========================================
-        // TEXTO Y FORMATO
+        // FORMATO DE TEXTO
         // ==========================================
         function formatearFecha(fechaString) {
             if (!fechaString) return "";
@@ -471,7 +482,7 @@
         }
 
         // ==========================================
-        // 3. LÓGICA DE FORMULARIOS Y EDICIÓN
+        // 3. FORMULARIOS Y EDICIÓN
         // ==========================================
         function toggleTarjetaIngreso() {
             const met = document.getElementById('ingreso-metodo').value;
@@ -501,11 +512,17 @@
             guardarTarjetaNueva(tarjeta);
 
             let actualizados = [...ingresos];
-            if (editIndexIngreso !== null) { actualizados[editIndexIngreso] = { tipo, fecha, trabajo, receptor, metodo, tarjeta, monto }; cancelarEdicionIngreso(); }
-            else { actualizados.push({ tipo, fecha, trabajo, receptor, metodo, tarjeta, monto }); }
+            if (editIndexIngreso !== null) { 
+                actualizados[editIndexIngreso] = { tipo, fecha, trabajo, receptor, metodo, tarjeta, monto }; 
+                cancelarEdicionIngreso(); 
+            } else { 
+                actualizados.push({ tipo, fecha, trabajo, receptor, metodo, tarjeta, monto }); 
+            }
             
             await db.collection("proyectos").doc(proyectoActualId).update({ ingresos: actualizados });
-            document.getElementById('form-ingreso').reset(); document.getElementById('ingreso-fecha').valueAsDate = new Date(); toggleTarjetaIngreso();
+            document.getElementById('form-ingreso').reset(); 
+            document.getElementById('ingreso-fecha').valueAsDate = new Date(); 
+            toggleTarjetaIngreso();
         }
 
         async function agregarGasto(e) {
@@ -520,11 +537,17 @@
             guardarTarjetaNueva(tarjeta);
 
             let actualizados = [...gastos];
-            if (editIndexGasto !== null) { actualizados[editIndexGasto] = { concepto, fecha, pagador, metodo, tarjeta, monto }; cancelarEdicionGasto(); }
-            else { actualizados.push({ concepto, fecha, pagador, metodo, tarjeta, monto }); }
+            if (editIndexGasto !== null) { 
+                actualizados[editIndexGasto] = { concepto, fecha, pagador, metodo, tarjeta, monto }; 
+                cancelarEdicionGasto(); 
+            } else { 
+                actualizados.push({ concepto, fecha, pagador, metodo, tarjeta, monto }); 
+            }
             
             await db.collection("proyectos").doc(proyectoActualId).update({ gastos: actualizados });
-            document.getElementById('form-gasto').reset(); document.getElementById('gasto-fecha').valueAsDate = new Date(); toggleTarjetaGasto();
+            document.getElementById('form-gasto').reset(); 
+            document.getElementById('gasto-fecha').valueAsDate = new Date(); 
+            toggleTarjetaGasto();
         }
 
         async function agregarPrestamo(e) {
@@ -535,24 +558,140 @@
             const monto = parseFloat(document.getElementById('prestamo-monto').value);
 
             let actualizados = [...prestamos];
-            if (editIndexPrestamo !== null) { actualizados[editIndexPrestamo] = { fecha, da, recibe, monto }; cancelarEdicionPrestamo(); }
-            else { actualizados.push({ fecha, da, recibe, monto }); }
+            if (editIndexPrestamo !== null) { 
+                actualizados[editIndexPrestamo] = { fecha, da, recibe, monto }; 
+                cancelarEdicionPrestamo(); 
+            } else { 
+                actualizados.push({ fecha, da, recibe, monto }); 
+            }
             
             await db.collection("proyectos").doc(proyectoActualId).update({ prestamos: actualizados });
-            document.getElementById('form-prestamo').reset(); document.getElementById('prestamo-fecha').valueAsDate = new Date(); actualizarReceptor();
+            document.getElementById('form-prestamo').reset(); 
+            document.getElementById('prestamo-fecha').valueAsDate = new Date(); 
+            actualizarReceptor();
         }
 
-        async function eliminarIngreso(index) { if(confirm("¿Eliminar?")) { let actualizados = [...ingresos]; actualizados.splice(index, 1); await db.collection("proyectos").doc(proyectoActualId).update({ ingresos: actualizados }); } }
-        async function eliminarGasto(index) { if(confirm("¿Eliminar?")) { let actualizados = [...gastos]; actualizados.splice(index, 1); await db.collection("proyectos").doc(proyectoActualId).update({ gastos: actualizados }); } }
-        async function eliminarPrestamo(index) { if(confirm("¿Eliminar?")) { let actualizados = [...prestamos]; actualizados.splice(index, 1); await db.collection("proyectos").doc(proyectoActualId).update({ prestamos: actualizados }); } }
+        // FUNCIONES DE ELIMINAR
+        async function eliminarIngreso(index) { 
+            if(confirm("¿Eliminar?")) { 
+                let actualizados = [...ingresos]; 
+                actualizados.splice(index, 1); 
+                await db.collection("proyectos").doc(proyectoActualId).update({ ingresos: actualizados }); 
+            } 
+        }
+        async function eliminarGasto(index) { 
+            if(confirm("¿Eliminar?")) { 
+                let actualizados = [...gastos]; 
+                actualizados.splice(index, 1); 
+                await db.collection("proyectos").doc(proyectoActualId).update({ gastos: actualizados }); 
+            } 
+        }
+        async function eliminarPrestamo(index) { 
+            if(confirm("¿Eliminar?")) { 
+                let actualizados = [...prestamos]; 
+                actualizados.splice(index, 1); 
+                await db.collection("proyectos").doc(proyectoActualId).update({ prestamos: actualizados }); 
+            } 
+        }
 
-        function editarIngreso(index) { const i = ingresos[index]; document.getElementById('ingreso-tipo').value=i.tipo; document.getElementById('ingreso-fecha').value=i.fecha; document.getElementById('ingreso-trabajo').value=i.trabajo; document.getElementById('ingreso-receptor').value=i.receptor; document.getElementById('ingreso-metodo').value=i.metodo; if(i.metodo==='Tarjeta')document.getElementById('ingreso-tarjeta-nombre').value=i.tarjeta!=='-'?i.tarjeta:''; document.getElementById('ingreso-monto').value=i.monto; toggleTarjetaIngreso(); editIndexIngreso = index; const btn=document.getElementById('btn-ingreso'); btn.textContent="Actualizar"; btn.className="w-full bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg"; document.getElementById('btn-cancelar-ingreso').classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); }
-        function editarGasto(index) { const g = gastos[index]; document.getElementById('gasto-concepto').value=g.concepto; document.getElementById('gasto-fecha').value=g.fecha; document.getElementById('gasto-pagador').value=g.pagador; document.getElementById('gasto-metodo').value=g.metodo; if(g.metodo==='Tarjeta')document.getElementById('gasto-tarjeta-nombre').value=g.tarjeta!=='-'?g.tarjeta:''; document.getElementById('gasto-monto').value=g.monto; toggleTarjetaGasto(); editIndexGasto = index; const btn=document.getElementById('btn-gasto'); btn.textContent="Actualizar"; btn.className="w-full bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg"; document.getElementById('btn-cancelar-gasto').classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); }
-        function editarPrestamo(index) { const p = prestamos[index]; document.getElementById('prestamo-fecha').value=p.fecha; document.getElementById('prestamo-da').value=p.da; actualizarReceptor(); document.getElementById('prestamo-monto').value=p.monto; editIndexPrestamo = index; const btn=document.getElementById('btn-prestamo'); btn.textContent="Actualizar"; btn.className="w-full bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg mt-2 sm:mt-8"; document.getElementById('btn-cancelar-prestamo').classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); }
+        // FUNCIONES DE EDITAR
+        function editarIngreso(index) { 
+            const i = ingresos[index]; 
+            document.getElementById('ingreso-tipo').value = i.tipo; 
+            document.getElementById('ingreso-fecha').value = i.fecha; 
+            document.getElementById('ingreso-trabajo').value = i.trabajo; 
+            document.getElementById('ingreso-receptor').value = i.receptor; 
+            document.getElementById('ingreso-metodo').value = i.metodo; 
+            
+            if(i.metodo === 'Tarjeta') {
+                document.getElementById('ingreso-tarjeta-nombre').value = i.tarjeta !== '-' ? i.tarjeta : ''; 
+            }
+            document.getElementById('ingreso-monto').value = i.monto; 
+            
+            toggleTarjetaIngreso(); 
+            editIndexIngreso = index; 
+            
+            const btn = document.getElementById('btn-ingreso'); 
+            btn.textContent = "Actualizar"; 
+            btn.className = "w-full bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg"; 
+            document.getElementById('btn-cancelar-ingreso').classList.remove('hidden'); 
+            window.scrollTo({top: 0, behavior: 'smooth'}); 
+        }
+        
+        function editarGasto(index) { 
+            const g = gastos[index]; 
+            document.getElementById('gasto-concepto').value = g.concepto; 
+            document.getElementById('gasto-fecha').value = g.fecha; 
+            document.getElementById('gasto-pagador').value = g.pagador; 
+            document.getElementById('gasto-metodo').value = g.metodo; 
+            
+            if(g.metodo === 'Tarjeta') {
+                document.getElementById('gasto-tarjeta-nombre').value = g.tarjeta !== '-' ? g.tarjeta : ''; 
+            }
+            document.getElementById('gasto-monto').value = g.monto; 
+            
+            toggleTarjetaGasto(); 
+            editIndexGasto = index; 
+            
+            const btn = document.getElementById('btn-gasto'); 
+            btn.textContent = "Actualizar"; 
+            btn.className = "w-full bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg"; 
+            document.getElementById('btn-cancelar-gasto').classList.remove('hidden'); 
+            window.scrollTo({top: 0, behavior: 'smooth'}); 
+        }
 
-        function cancelarEdicionIngreso() { editIndexIngreso = null; document.getElementById('form-ingreso').reset(); document.getElementById('ingreso-fecha').valueAsDate = new Date(); toggleTarjetaIngreso(); const btn=document.getElementById('btn-ingreso'); btn.textContent="Guardar Ingreso"; btn.className="w-full bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-bold py-3 px-4 rounded-lg"; document.getElementById('btn-cancelar-ingreso').classList.add('hidden'); }
-        function cancelarEdicionGasto() { editIndexGasto = null; document.getElementById('form-gasto').reset(); document.getElementById('gasto-fecha').valueAsDate = new Date(); toggleTarjetaGasto(); const btn=document.getElementById('btn-gasto'); btn.textContent="Guardar Gasto"; btn.className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-3 px-4 rounded-lg"; document.getElementById('btn-cancelar-gasto').classList.add('hidden'); }
-        function cancelarEdicionPrestamo() { editIndexPrestamo = null; document.getElementById('form-prestamo').reset(); document.getElementById('prestamo-fecha').valueAsDate = new Date(); actualizarReceptor(); const btn=document.getElementById('btn-prestamo'); btn.textContent="Guardar Préstamo"; btn.className="w-full bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white font-bold py-3 px-4 rounded-lg mt-2 sm:mt-8"; document.getElementById('btn-cancelar-prestamo').classList.add('hidden'); }
+        function editarPrestamo(index) { 
+            const p = prestamos[index]; 
+            document.getElementById('prestamo-fecha').value = p.fecha; 
+            document.getElementById('prestamo-da').value = p.da; 
+            actualizarReceptor(); 
+            document.getElementById('prestamo-monto').value = p.monto; 
+            
+            editIndexPrestamo = index; 
+            
+            const btn = document.getElementById('btn-prestamo'); 
+            btn.textContent = "Actualizar"; 
+            btn.className = "w-full bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg mt-2 sm:mt-8"; 
+            document.getElementById('btn-cancelar-prestamo').classList.remove('hidden'); 
+            window.scrollTo({top: 0, behavior: 'smooth'}); 
+        }
+
+        // FUNCIONES DE CANCELAR EDICIÓN
+        function cancelarEdicionIngreso() { 
+            editIndexIngreso = null; 
+            document.getElementById('form-ingreso').reset(); 
+            document.getElementById('ingreso-fecha').valueAsDate = new Date(); 
+            toggleTarjetaIngreso(); 
+            
+            const btn = document.getElementById('btn-ingreso'); 
+            btn.textContent = "Guardar Ingreso"; 
+            btn.className = "w-full bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-bold py-3 px-4 rounded-lg shadow transition-colors"; 
+            document.getElementById('btn-cancelar-ingreso').classList.add('hidden'); 
+        }
+        
+        function cancelarEdicionGasto() { 
+            editIndexGasto = null; 
+            document.getElementById('form-gasto').reset(); 
+            document.getElementById('gasto-fecha').valueAsDate = new Date(); 
+            toggleTarjetaGasto(); 
+            
+            const btn = document.getElementById('btn-gasto'); 
+            btn.textContent = "Guardar Gasto"; 
+            btn.className = "w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-3 px-4 rounded-lg shadow transition-colors"; 
+            document.getElementById('btn-cancelar-gasto').classList.add('hidden'); 
+        }
+        
+        function cancelarEdicionPrestamo() { 
+            editIndexPrestamo = null; 
+            document.getElementById('form-prestamo').reset(); 
+            document.getElementById('prestamo-fecha').valueAsDate = new Date(); 
+            actualizarReceptor(); 
+            
+            const btn = document.getElementById('btn-prestamo'); 
+            btn.textContent = "Guardar Préstamo"; 
+            btn.className = "w-full bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white font-bold py-3 px-4 rounded-lg shadow transition-colors mt-2 sm:mt-8"; 
+            document.getElementById('btn-cancelar-prestamo').classList.add('hidden'); 
+        }
 
         // ==========================================
         // 4. ACTUALIZACIÓN DE INTERFAZ Y CÁLCULOS
@@ -588,7 +727,7 @@
                     </tr>`;
             });
 
-            // Gastos Separados
+            // Gastos
             const tbGPapa = document.querySelector('#tabla-gastos-papa tbody'); tbGPapa.innerHTML = '';
             const tbGHijo = document.querySelector('#tabla-gastos-hijo tbody'); tbGHijo.innerHTML = '';
             
@@ -635,7 +774,7 @@
                     </tr>`;
             });
 
-            // Cálculos
+            // Cálculos Finales
             const utilidad = totalIngresos - totalGastos;
             const gananciaPapa = utilidad > 0 ? (utilidad * 0.55) : 0;
             const gananciaHijo = utilidad > 0 ? (utilidad * 0.45) : 0;
@@ -648,7 +787,7 @@
             document.getElementById('res-papa-mano').innerText = formatoMoneda(manoPapa);
             document.getElementById('res-hijo-mano').innerText = formatoMoneda(manoHijo);
 
-            // Ajuste
+            // Ajuste Final
             const ajusteDiv = document.getElementById('ajuste-cuentas');
             const ajusteTexto = document.getElementById('texto-ajuste');
             if(utilidad > 0) {
