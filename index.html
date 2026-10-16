@@ -2,11 +2,12 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <!-- Meta tag optimizado para WebView en Android: sin zoom, escalado fijo -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Contabilidad Empresa Familiar</title>
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS para los estilos -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- jsPDF -->
+    <!-- jsPDF para generar el PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     
@@ -18,46 +19,46 @@
         body { 
             background-color: #f3f4f6; 
             font-family: 'Inter', sans-serif; 
-            -webkit-tap-highlight-color: transparent; 
+            -webkit-tap-highlight-color: transparent; /* Quita el recuadro azul nativo de Android al tocar */
         }
+        /* Scrollbar delgada para WebView */
         ::-webkit-scrollbar { height: 6px; width: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px;}
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px;}
     </style>
 </head>
-<body class="pb-20">
+<body class="p-2 sm:p-6 pb-20"> <!-- Padding menor en mobile, pb-20 por si hay barra de navegación abajo -->
 
-    <!-- BARRA SUPERIOR FIJA (Sticky Header) -->
-    <div class="sticky top-0 z-50 bg-white/95 backdrop-blur shadow-md px-4 py-3 mb-6 flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-gray-200 w-full">
-        <div class="flex items-center gap-3 w-full sm:w-auto">
-            <img id="logo-img" src="" alt="Logo" class="h-10 hidden object-contain">
-            
-            <!-- Selector de Cuaderno integrado en la barra -->
-            <div class="flex-1 flex items-center bg-gray-100 rounded-lg pr-2 border border-gray-200">
-                <select id="proyecto-selector" onchange="seleccionarProyecto()" class="w-full bg-transparent border-none focus:ring-0 text-sm font-bold text-indigo-900 p-2 truncate">
-                    <option value="">Cargando cuadernos...</option>
+    <div class="max-w-6xl mx-auto">
+        <!-- Encabezado y Logotipo -->
+        <div class="flex flex-col sm:flex-row items-center justify-between mb-4 sm:mb-8 bg-white p-4 rounded-xl shadow gap-4">
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-center sm:justify-start">
+                <img id="logo-img" src="" alt="Logo" class="h-12 sm:h-16 hidden object-contain">
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 text-center">Contabilidad</h1>
+            </div>
+            <button onclick="generarPDF()" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-colors">
+                📄 Generar PDF Completo
+            </button>
+        </div>
+
+        <!-- Gestor de Proyectos / Cuadernos -->
+        <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-xl shadow mb-6 flex flex-col md:flex-row items-center justify-between gap-3">
+            <div class="flex-1 w-full">
+                <label class="block text-sm font-bold text-gray-700 mb-1">Cuaderno Actual:</label>
+                <select id="proyecto-selector" onchange="seleccionarProyecto()" class="w-full border-gray-300 rounded-lg p-3 bg-white font-semibold text-gray-800 shadow-sm focus:ring-2 focus:ring-indigo-500">
+                    <option value="">Cargando proyectos...</option>
                 </select>
-                <button onclick="crearNuevoProyecto()" class="text-indigo-600 hover:bg-indigo-200 active:bg-indigo-300 rounded p-1 font-bold text-xl leading-none transition-colors" title="Nuevo Cuaderno">
-                    +
+            </div>
+            <div class="flex-1 w-full flex items-end">
+                <button onclick="crearNuevoProyecto()" class="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold py-3 px-4 rounded-lg shadow-md w-full transition-colors mt-2 md:mt-0">
+                    + Nuevo Cuaderno
                 </button>
             </div>
         </div>
 
-        <button onclick="generarPDF()" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold py-2 px-4 rounded-lg shadow transition-colors text-sm flex justify-center items-center gap-2">
-            📄 <span>Exportar PDF</span>
-        </button>
-    </div>
-
-    <!-- Contenedor Principal -->
-    <div class="max-w-6xl mx-auto px-2 sm:px-6">
-
-        <!-- Lista oculta para autocompletar las tarjetas -->
-        <datalist id="lista-tarjetas"></datalist>
-
         <div id="app-content" class="hidden">
-            <!-- Formularios -->
+            <!-- Formularios (Se apilan en mobile, 3 columnas en PC) -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-                
                 <!-- Registro de Ingresos -->
                 <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
                     <h2 class="text-lg font-bold text-green-700 mb-4 border-b pb-2 flex items-center gap-2">💰 1. Ingreso (Anticipo)</h2>
@@ -95,8 +96,8 @@
                                 </select>
                             </div>
                             <div id="div-tarjeta-ingreso" class="hidden">
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Tarjeta guardada</label>
-                                <input type="text" id="ingreso-tarjeta-nombre" list="lista-tarjetas" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-500" placeholder="Elegir o escribir">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Tarjeta</label>
+                                <input type="text" id="ingreso-tarjeta-nombre" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-500" placeholder="Ej. Bancomer">
                             </div>
                         </div>
                         <div class="mb-5">
@@ -138,8 +139,8 @@
                                 </select>
                             </div>
                             <div id="div-tarjeta-gasto" class="hidden">
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Tarjeta guardada</label>
-                                <input type="text" id="gasto-tarjeta-nombre" list="lista-tarjetas" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-red-500" placeholder="Elegir o escribir">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Tarjeta</label>
+                                <input type="text" id="gasto-tarjeta-nombre" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-red-500" placeholder="Ej. Santander">
                             </div>
                         </div>
                         <div class="mb-5">
@@ -182,21 +183,22 @@
                 </div>
             </div>
 
-            <!-- Ajuste Final de Cuentas -->
+            <!-- Ajuste de Cuentas (Quién debe a quién) -->
             <div id="ajuste-cuentas" class="bg-yellow-100 border-l-4 border-yellow-500 p-4 sm:p-6 rounded-xl shadow mb-6 hidden">
                 <h2 class="text-lg sm:text-xl font-bold text-yellow-800 mb-2">⚖️ Ajuste Final de Cuentas</h2>
                 <p id="texto-ajuste" class="text-sm sm:text-lg text-yellow-900 font-medium leading-tight"></p>
             </div>
 
-            <!-- Resumen Financiero y Dinero Físico -->
+            <!-- Resumen de Totales y Dinero en Mano -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
-                <!-- Resumen -->
+                <!-- Resumen Financiero -->
                 <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
                     <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">📊 Resumen Financiero</h2>
                     <div class="space-y-3 text-sm sm:text-base">
                         <div class="flex justify-between border-b pb-2"><span class="text-gray-600">Total Ingresos:</span> <span class="font-bold text-green-600" id="res-ingresos">$0.00</span></div>
                         <div class="flex justify-between border-b pb-2"><span class="text-gray-600">Total Gastos:</span> <span class="font-bold text-red-600" id="res-gastos">$0.00</span></div>
                         <div class="flex justify-between border-b pb-2"><span class="text-gray-600">Utilidad Libre:</span> <span class="font-bold text-blue-600 text-lg" id="res-utilidad">$0.00</span></div>
+                        
                         <div class="mt-4 bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-200">
                             <h3 class="font-bold text-gray-700 mb-2 text-xs uppercase">Ganancia Neta:</h3>
                             <div class="flex justify-between mb-1"><span class="text-gray-700">Papá (55%):</span> <span class="font-bold" id="res-papa-ganancia">$0.00</span></div>
@@ -205,7 +207,7 @@
                     </div>
                 </div>
 
-                <!-- Dinero Físico -->
+                <!-- Dinero Físico en Mano -->
                 <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
                     <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">💵 Dinero Físico (En la Bolsa)</h2>
                     <div class="space-y-4 text-sm sm:text-base">
@@ -314,7 +316,7 @@
 
     <script>
         // ==========================================
-        // 1. CONFIGURACIÓN FIREBASE
+        // 1. CONFIGURACIÓN
         // ==========================================
         const LOGO_URL = "https://res.cloudinary.com/ittxlkln/image/upload/v1792126734/LOGO_PORTADA.jpg";
         
@@ -344,44 +346,8 @@
         let editIndexGasto = null;
         let editIndexPrestamo = null;
 
-        // --- SISTEMA DE TARJETAS GUARDADAS (Blindado contra WebView) ---
-        let tarjetasGuardadas = [];
-        
-        try {
-            const guardadas = localStorage.getItem("tarjetasEmpresaFamiliar");
-            if(guardadas) {
-                tarjetasGuardadas = JSON.parse(guardadas);
-            }
-        } catch(error) {
-            console.warn("localStorage no disponible en este WebView.", error);
-        }
-
-        function actualizarListaTarjetas() {
-            const dl = document.getElementById('lista-tarjetas');
-            dl.innerHTML = '';
-            tarjetasGuardadas.forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t;
-                dl.appendChild(opt);
-            });
-        }
-
-        function guardarTarjetaNueva(nombre) {
-            if (!nombre || nombre === '-') return;
-            const nombreLimpio = nombre.trim();
-            if (nombreLimpio.length > 0 && !tarjetasGuardadas.includes(nombreLimpio)) {
-                tarjetasGuardadas.push(nombreLimpio);
-                try {
-                    localStorage.setItem("tarjetasEmpresaFamiliar", JSON.stringify(tarjetasGuardadas));
-                } catch(error) {
-                    // Si falla el WebView, lo ignoramos y seguimos ejecutando todo
-                }
-                actualizarListaTarjetas();
-            }
-        }
-
         // ==========================================
-        // 2. LÓGICA DE PROYECTOS
+        // 2. LÓGICA DE PROYECTOS / CUADERNOS
         // ==========================================
         function initApp() {
             if(LOGO_URL && LOGO_URL !== "https://tu-sitio.com/ruta-a-tu-logo.png") {
@@ -393,15 +359,13 @@
             document.getElementById('ingreso-fecha').valueAsDate = new Date();
             document.getElementById('gasto-fecha').valueAsDate = new Date();
             document.getElementById('prestamo-fecha').valueAsDate = new Date();
-            
-            actualizarListaTarjetas();
             cargarProyectos();
         }
 
         function cargarProyectos() {
             db.collection("proyectos").orderBy("createdAt", "desc").onSnapshot((snapshot) => {
                 const selector = document.getElementById('proyecto-selector');
-                selector.innerHTML = '<option value="">Selecciona un Cuaderno...</option>';
+                selector.innerHTML = '<option value="">-- Selecciona un Cuaderno --</option>';
                 
                 snapshot.forEach(doc => {
                     const data = doc.data();
@@ -466,13 +430,14 @@
         }
 
         // ==========================================
-        // FORMATO DE TEXTO
+        // TEXTO Y FORMATO (Acortado para móvil)
         // ==========================================
         function formatearFecha(fechaString) {
             if (!fechaString) return "";
             const partes = fechaString.split('-');
             if (partes.length !== 3) return fechaString; 
             const fecha = new Date(partes[0], partes[1] - 1, partes[2]);
+            // Para móvil, usar un formato más corto: "15 oct. 2026"
             const opciones = { year: 'numeric', month: 'short', day: 'numeric' };
             return fecha.toLocaleDateString('es-MX', opciones);
         }
@@ -482,7 +447,7 @@
         }
 
         // ==========================================
-        // 3. FORMULARIOS Y EDICIÓN
+        // 3. LÓGICA DE FORMULARIOS Y EDICIÓN
         // ==========================================
         function toggleTarjetaIngreso() {
             const met = document.getElementById('ingreso-metodo').value;
@@ -509,20 +474,12 @@
             const tarjeta = metodo === 'Tarjeta' ? document.getElementById('ingreso-tarjeta-nombre').value : '-';
             const monto = parseFloat(document.getElementById('ingreso-monto').value);
 
-            guardarTarjetaNueva(tarjeta);
-
             let actualizados = [...ingresos];
-            if (editIndexIngreso !== null) { 
-                actualizados[editIndexIngreso] = { tipo, fecha, trabajo, receptor, metodo, tarjeta, monto }; 
-                cancelarEdicionIngreso(); 
-            } else { 
-                actualizados.push({ tipo, fecha, trabajo, receptor, metodo, tarjeta, monto }); 
-            }
+            if (editIndexIngreso !== null) { actualizados[editIndexIngreso] = { tipo, fecha, trabajo, receptor, metodo, tarjeta, monto }; cancelarEdicionIngreso(); }
+            else { actualizados.push({ tipo, fecha, trabajo, receptor, metodo, tarjeta, monto }); }
             
             await db.collection("proyectos").doc(proyectoActualId).update({ ingresos: actualizados });
-            document.getElementById('form-ingreso').reset(); 
-            document.getElementById('ingreso-fecha').valueAsDate = new Date(); 
-            toggleTarjetaIngreso();
+            document.getElementById('form-ingreso').reset(); document.getElementById('ingreso-fecha').valueAsDate = new Date(); toggleTarjetaIngreso();
         }
 
         async function agregarGasto(e) {
@@ -534,20 +491,12 @@
             const tarjeta = metodo === 'Tarjeta' ? document.getElementById('gasto-tarjeta-nombre').value : '-';
             const monto = parseFloat(document.getElementById('gasto-monto').value);
 
-            guardarTarjetaNueva(tarjeta);
-
             let actualizados = [...gastos];
-            if (editIndexGasto !== null) { 
-                actualizados[editIndexGasto] = { concepto, fecha, pagador, metodo, tarjeta, monto }; 
-                cancelarEdicionGasto(); 
-            } else { 
-                actualizados.push({ concepto, fecha, pagador, metodo, tarjeta, monto }); 
-            }
+            if (editIndexGasto !== null) { actualizados[editIndexGasto] = { concepto, fecha, pagador, metodo, tarjeta, monto }; cancelarEdicionGasto(); }
+            else { actualizados.push({ concepto, fecha, pagador, metodo, tarjeta, monto }); }
             
             await db.collection("proyectos").doc(proyectoActualId).update({ gastos: actualizados });
-            document.getElementById('form-gasto').reset(); 
-            document.getElementById('gasto-fecha').valueAsDate = new Date(); 
-            toggleTarjetaGasto();
+            document.getElementById('form-gasto').reset(); document.getElementById('gasto-fecha').valueAsDate = new Date(); toggleTarjetaGasto();
         }
 
         async function agregarPrestamo(e) {
@@ -558,140 +507,24 @@
             const monto = parseFloat(document.getElementById('prestamo-monto').value);
 
             let actualizados = [...prestamos];
-            if (editIndexPrestamo !== null) { 
-                actualizados[editIndexPrestamo] = { fecha, da, recibe, monto }; 
-                cancelarEdicionPrestamo(); 
-            } else { 
-                actualizados.push({ fecha, da, recibe, monto }); 
-            }
+            if (editIndexPrestamo !== null) { actualizados[editIndexPrestamo] = { fecha, da, recibe, monto }; cancelarEdicionPrestamo(); }
+            else { actualizados.push({ fecha, da, recibe, monto }); }
             
             await db.collection("proyectos").doc(proyectoActualId).update({ prestamos: actualizados });
-            document.getElementById('form-prestamo').reset(); 
-            document.getElementById('prestamo-fecha').valueAsDate = new Date(); 
-            actualizarReceptor();
+            document.getElementById('form-prestamo').reset(); document.getElementById('prestamo-fecha').valueAsDate = new Date(); actualizarReceptor();
         }
 
-        // FUNCIONES DE ELIMINAR
-        async function eliminarIngreso(index) { 
-            if(confirm("¿Eliminar?")) { 
-                let actualizados = [...ingresos]; 
-                actualizados.splice(index, 1); 
-                await db.collection("proyectos").doc(proyectoActualId).update({ ingresos: actualizados }); 
-            } 
-        }
-        async function eliminarGasto(index) { 
-            if(confirm("¿Eliminar?")) { 
-                let actualizados = [...gastos]; 
-                actualizados.splice(index, 1); 
-                await db.collection("proyectos").doc(proyectoActualId).update({ gastos: actualizados }); 
-            } 
-        }
-        async function eliminarPrestamo(index) { 
-            if(confirm("¿Eliminar?")) { 
-                let actualizados = [...prestamos]; 
-                actualizados.splice(index, 1); 
-                await db.collection("proyectos").doc(proyectoActualId).update({ prestamos: actualizados }); 
-            } 
-        }
+        async function eliminarIngreso(index) { if(confirm("¿Eliminar?")) { let actualizados = [...ingresos]; actualizados.splice(index, 1); await db.collection("proyectos").doc(proyectoActualId).update({ ingresos: actualizados }); } }
+        async function eliminarGasto(index) { if(confirm("¿Eliminar?")) { let actualizados = [...gastos]; actualizados.splice(index, 1); await db.collection("proyectos").doc(proyectoActualId).update({ gastos: actualizados }); } }
+        async function eliminarPrestamo(index) { if(confirm("¿Eliminar?")) { let actualizados = [...prestamos]; actualizados.splice(index, 1); await db.collection("proyectos").doc(proyectoActualId).update({ prestamos: actualizados }); } }
 
-        // FUNCIONES DE EDITAR
-        function editarIngreso(index) { 
-            const i = ingresos[index]; 
-            document.getElementById('ingreso-tipo').value = i.tipo; 
-            document.getElementById('ingreso-fecha').value = i.fecha; 
-            document.getElementById('ingreso-trabajo').value = i.trabajo; 
-            document.getElementById('ingreso-receptor').value = i.receptor; 
-            document.getElementById('ingreso-metodo').value = i.metodo; 
-            
-            if(i.metodo === 'Tarjeta') {
-                document.getElementById('ingreso-tarjeta-nombre').value = i.tarjeta !== '-' ? i.tarjeta : ''; 
-            }
-            document.getElementById('ingreso-monto').value = i.monto; 
-            
-            toggleTarjetaIngreso(); 
-            editIndexIngreso = index; 
-            
-            const btn = document.getElementById('btn-ingreso'); 
-            btn.textContent = "Actualizar"; 
-            btn.className = "w-full bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg"; 
-            document.getElementById('btn-cancelar-ingreso').classList.remove('hidden'); 
-            window.scrollTo({top: 0, behavior: 'smooth'}); 
-        }
-        
-        function editarGasto(index) { 
-            const g = gastos[index]; 
-            document.getElementById('gasto-concepto').value = g.concepto; 
-            document.getElementById('gasto-fecha').value = g.fecha; 
-            document.getElementById('gasto-pagador').value = g.pagador; 
-            document.getElementById('gasto-metodo').value = g.metodo; 
-            
-            if(g.metodo === 'Tarjeta') {
-                document.getElementById('gasto-tarjeta-nombre').value = g.tarjeta !== '-' ? g.tarjeta : ''; 
-            }
-            document.getElementById('gasto-monto').value = g.monto; 
-            
-            toggleTarjetaGasto(); 
-            editIndexGasto = index; 
-            
-            const btn = document.getElementById('btn-gasto'); 
-            btn.textContent = "Actualizar"; 
-            btn.className = "w-full bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg"; 
-            document.getElementById('btn-cancelar-gasto').classList.remove('hidden'); 
-            window.scrollTo({top: 0, behavior: 'smooth'}); 
-        }
+        function editarIngreso(index) { const i = ingresos[index]; document.getElementById('ingreso-tipo').value=i.tipo; document.getElementById('ingreso-fecha').value=i.fecha; document.getElementById('ingreso-trabajo').value=i.trabajo; document.getElementById('ingreso-receptor').value=i.receptor; document.getElementById('ingreso-metodo').value=i.metodo; if(i.metodo==='Tarjeta')document.getElementById('ingreso-tarjeta-nombre').value=i.tarjeta!=='-'?i.tarjeta:''; document.getElementById('ingreso-monto').value=i.monto; toggleTarjetaIngreso(); editIndexIngreso = index; const btn=document.getElementById('btn-ingreso'); btn.textContent="Actualizar"; btn.className="w-full bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg"; document.getElementById('btn-cancelar-ingreso').classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); }
+        function editarGasto(index) { const g = gastos[index]; document.getElementById('gasto-concepto').value=g.concepto; document.getElementById('gasto-fecha').value=g.fecha; document.getElementById('gasto-pagador').value=g.pagador; document.getElementById('gasto-metodo').value=g.metodo; if(g.metodo==='Tarjeta')document.getElementById('gasto-tarjeta-nombre').value=g.tarjeta!=='-'?g.tarjeta:''; document.getElementById('gasto-monto').value=g.monto; toggleTarjetaGasto(); editIndexGasto = index; const btn=document.getElementById('btn-gasto'); btn.textContent="Actualizar"; btn.className="w-full bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg"; document.getElementById('btn-cancelar-gasto').classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); }
+        function editarPrestamo(index) { const p = prestamos[index]; document.getElementById('prestamo-fecha').value=p.fecha; document.getElementById('prestamo-da').value=p.da; actualizarReceptor(); document.getElementById('prestamo-monto').value=p.monto; editIndexPrestamo = index; const btn=document.getElementById('btn-prestamo'); btn.textContent="Actualizar"; btn.className="w-full bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg mt-2 sm:mt-8"; document.getElementById('btn-cancelar-prestamo').classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); }
 
-        function editarPrestamo(index) { 
-            const p = prestamos[index]; 
-            document.getElementById('prestamo-fecha').value = p.fecha; 
-            document.getElementById('prestamo-da').value = p.da; 
-            actualizarReceptor(); 
-            document.getElementById('prestamo-monto').value = p.monto; 
-            
-            editIndexPrestamo = index; 
-            
-            const btn = document.getElementById('btn-prestamo'); 
-            btn.textContent = "Actualizar"; 
-            btn.className = "w-full bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg mt-2 sm:mt-8"; 
-            document.getElementById('btn-cancelar-prestamo').classList.remove('hidden'); 
-            window.scrollTo({top: 0, behavior: 'smooth'}); 
-        }
-
-        // FUNCIONES DE CANCELAR EDICIÓN
-        function cancelarEdicionIngreso() { 
-            editIndexIngreso = null; 
-            document.getElementById('form-ingreso').reset(); 
-            document.getElementById('ingreso-fecha').valueAsDate = new Date(); 
-            toggleTarjetaIngreso(); 
-            
-            const btn = document.getElementById('btn-ingreso'); 
-            btn.textContent = "Guardar Ingreso"; 
-            btn.className = "w-full bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-bold py-3 px-4 rounded-lg shadow transition-colors"; 
-            document.getElementById('btn-cancelar-ingreso').classList.add('hidden'); 
-        }
-        
-        function cancelarEdicionGasto() { 
-            editIndexGasto = null; 
-            document.getElementById('form-gasto').reset(); 
-            document.getElementById('gasto-fecha').valueAsDate = new Date(); 
-            toggleTarjetaGasto(); 
-            
-            const btn = document.getElementById('btn-gasto'); 
-            btn.textContent = "Guardar Gasto"; 
-            btn.className = "w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-3 px-4 rounded-lg shadow transition-colors"; 
-            document.getElementById('btn-cancelar-gasto').classList.add('hidden'); 
-        }
-        
-        function cancelarEdicionPrestamo() { 
-            editIndexPrestamo = null; 
-            document.getElementById('form-prestamo').reset(); 
-            document.getElementById('prestamo-fecha').valueAsDate = new Date(); 
-            actualizarReceptor(); 
-            
-            const btn = document.getElementById('btn-prestamo'); 
-            btn.textContent = "Guardar Préstamo"; 
-            btn.className = "w-full bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white font-bold py-3 px-4 rounded-lg shadow transition-colors mt-2 sm:mt-8"; 
-            document.getElementById('btn-cancelar-prestamo').classList.add('hidden'); 
-        }
+        function cancelarEdicionIngreso() { editIndexIngreso = null; document.getElementById('form-ingreso').reset(); document.getElementById('ingreso-fecha').valueAsDate = new Date(); toggleTarjetaIngreso(); const btn=document.getElementById('btn-ingreso'); btn.textContent="Guardar Ingreso"; btn.className="w-full bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-bold py-3 px-4 rounded-lg"; document.getElementById('btn-cancelar-ingreso').classList.add('hidden'); }
+        function cancelarEdicionGasto() { editIndexGasto = null; document.getElementById('form-gasto').reset(); document.getElementById('gasto-fecha').valueAsDate = new Date(); toggleTarjetaGasto(); const btn=document.getElementById('btn-gasto'); btn.textContent="Guardar Gasto"; btn.className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-3 px-4 rounded-lg"; document.getElementById('btn-cancelar-gasto').classList.add('hidden'); }
+        function cancelarEdicionPrestamo() { editIndexPrestamo = null; document.getElementById('form-prestamo').reset(); document.getElementById('prestamo-fecha').valueAsDate = new Date(); actualizarReceptor(); const btn=document.getElementById('btn-prestamo'); btn.textContent="Guardar Préstamo"; btn.className="w-full bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white font-bold py-3 px-4 rounded-lg mt-2 sm:mt-8"; document.getElementById('btn-cancelar-prestamo').classList.add('hidden'); }
 
         // ==========================================
         // 4. ACTUALIZACIÓN DE INTERFAZ Y CÁLCULOS
@@ -700,7 +533,7 @@
             let totalIngresos = 0, totalGastos = 0;
             let manoPapa = 0, manoHijo = 0;
 
-            // Ingresos
+            // Ingresos (Tabla combinada para mobile)
             const tbI = document.querySelector('#tabla-ingresos tbody'); tbI.innerHTML = '';
             ingresos.forEach((i, idx) => {
                 totalIngresos += i.monto;
@@ -717,7 +550,7 @@
                         </td>
                         <td class="p-3">
                             <div class="font-bold text-gray-800">${i.receptor}</div>
-                            <div class="text-xs text-gray-500">${i.metodo} ${i.tarjeta !== '-' ? `<br>(${i.tarjeta})` : ''}</div>
+                            <div class="text-xs text-gray-500">${i.metodo}</div>
                         </td>
                         <td class="p-3 text-right text-green-700 font-bold">${formatoMoneda(i.monto)}</td>
                         <td class="p-3 text-center">
@@ -727,7 +560,7 @@
                     </tr>`;
             });
 
-            // Gastos
+            // Gastos Separados
             const tbGPapa = document.querySelector('#tabla-gastos-papa tbody'); tbGPapa.innerHTML = '';
             const tbGHijo = document.querySelector('#tabla-gastos-hijo tbody'); tbGHijo.innerHTML = '';
             
@@ -738,7 +571,7 @@
                         <td class="p-3">
                             <div class="capitalize text-xs text-gray-500">${formatearFecha(g.fecha)}</div>
                             <div class="font-medium text-gray-800">${g.concepto}</div>
-                            <div class="text-xs text-gray-400">${g.metodo} ${g.tarjeta !== '-' ? `(${g.tarjeta})` : ''}</div>
+                            <div class="text-xs text-gray-400">${g.metodo}</div>
                         </td>
                         <td class="p-3 text-right text-red-600 font-bold align-middle">${formatoMoneda(g.monto)}</td>
                         <td class="p-3 text-center align-middle">
@@ -774,7 +607,7 @@
                     </tr>`;
             });
 
-            // Cálculos Finales
+            // Cálculos
             const utilidad = totalIngresos - totalGastos;
             const gananciaPapa = utilidad > 0 ? (utilidad * 0.55) : 0;
             const gananciaHijo = utilidad > 0 ? (utilidad * 0.45) : 0;
@@ -787,7 +620,7 @@
             document.getElementById('res-papa-mano').innerText = formatoMoneda(manoPapa);
             document.getElementById('res-hijo-mano').innerText = formatoMoneda(manoHijo);
 
-            // Ajuste Final
+            // Ajuste
             const ajusteDiv = document.getElementById('ajuste-cuentas');
             const ajusteTexto = document.getElementById('texto-ajuste');
             if(utilidad > 0) {
